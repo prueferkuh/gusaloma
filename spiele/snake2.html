@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake II - Vokabel Edition</title>
+    <style>
+        :root {
+            --bg-color: #1a1a24;
+            --panel-bg: #252532;
+            --accent-gold: #f1c40f;
+            --accent-blue: #3498db;
+            --text-color: #ffffff;
+        }
+
+        /* Verhindert das Standard-Wischen zum Aktualisieren auf Mobilgeräten */
+        html, body {
+            overscroll-behavior-y: contain;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        body {
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .back-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 0;
+            align-self: flex-start;
+        }
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid #333;
+            width: 100%;
+            max-width: 600px; /* Begrenzt die Größe auf dem PC */
+            box-sizing: border-box;
+        }
+
+        #info-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        #task-display {
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--accent-gold);
+            min-height: 35px;
+        }
+
+        /* Macht das Canvas-Element responsiv */
+        .canvas-wrapper {
+            width: 100%;
+            position: relative;
+        }
+
+        canvas {
+            background-color: #0d0d13;
+            border: 4px solid #444;
+            border-radius: 8px;
+            display: block;
+            width: 100%; /* Passt sich der Breite des Containers an */
+            height: auto; /* Behält das Seitenverhältnis bei */
+            box-sizing: border-box;
+        }
+
+        #controls-hint {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #888;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* Overlay für Game Over / Start */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .overlay-box {
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid var(--accent-gold);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        .overlay button {
+            background: var(--accent-gold);
+            color: #1a1a24; border: none; padding: 12px 24px;
+            font-size: 1.1rem; font-weight: bold; border-radius: 8px;
+            cursor: pointer; margin-top: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="../index.html" class="back-link">← Menü</a>
+    
+    <div id="game-container">
+        <div id="info-panel">
+            <div>Kat: <span id="current-category" style="color:var(--accent-blue);">Lade...</span></div>
+            <div>Score: <span id="score-display" style="font-weight:bold; color:#2ecc71;">0</span></div>
+        </div>
+        
+        <div id="task-display">Sammle das richtige spanische Wort!</div>
+        
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="600" height="400"></canvas>
+        </div>
+        
+        <div id="controls-hint">
+            <strong>PC:</strong> Pfeiltasten / WASD | <strong>Smartphone:</strong> Wischen (Swipe)<br>
+            Beide Wörter sehen gleich aus! Finde die richtige Übersetzung.<br>
+            Richtig = Wachsen (+10) | Falsch = Schrumpfen (-5)
+        </div>
+    </div>
+
+    <div id="game-overlay" class="overlay" style="display:none;">
+        <div class="overlay-box">
+            <h2 id="overlay-title">Bereit?</h2>
+            <p id="overlay-text">Lade Vokabeln...</p>
+            <button id="overlay-button" onclick="closeOverlayAndStart()">Spiel starten</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridBox = 20;
+        
+        let snake = [];
+        let dir = "RIGHT";
+        let score = 0;
+        let gameInterval = null;
+        let speed = 130;
+
+        let alleVokabeln = [];
+        let aktuelleFrage = null;
+        let richtigesFutter = null;
+        let falschesFutter = null;
+        let kategorieName = "Essen und Trinken";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('kategorie')) {
+            kategorieName = urlParams.get('kategorie');
+        }
+        document.getElementById('current-category').innerText = kategorieName;
+
+        fetch('../vokabeln.json')
+            .then(response => response.json())
+            .then(data => {
+                const katData = data.find(k => k.kategorie === kategorieName);
+                if (katData && katData.vokabeln.length > 1) {
+                    alleVokabeln = katData.vokabeln;
+                    showOverlay("Snake II: Multiplatform", "Beide Futterpunkte sehen gleich aus! Auf dem Smartphone steuerst du einfach per Wischbewegung (Swipe). Legen wir los?");
+                } else {
+                    alert("Kategorie nicht gefunden!");
+                }
+            })
+            .catch(err => console.error("Fehler beim Laden:", err));
+
+        function showOverlay(title, text) {
+            document.getElementById('overlay-title').innerText = title;
+            document.getElementById('overlay-text').innerText = text;
+            document.getElementById('game-overlay').style.display = 'flex';
+        }
+
+        function closeOverlayAndStart() {
+            document.getElementById('game-overlay').style.display = 'none';
+            initGame();
+        }
+
+        function initGame() {
+            snake = [
+                {x: 10 * gridBox, y: 10 * gridBox},
+                {x: 9 * gridBox, y: 10 * gridBox},
+                {x: 8 * gridBox, y: 10 * gridBox}
+            ];
+            dir = "RIGHT";
+            score = 0;
+            document.getElementById('score-display').innerText = score;
+            neueRunde();
+            
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(draw, speed);
+        }
+
+        function neueRunde() {
+            const rndi = Math.floor(Math.random() * alleVokabeln.length);
+            aktuelleFrage = alleVokabeln[rndi];
+            document.getElementById('task-display').innerText = `Gesucht: "${aktuelleFrage.de}"`;
+
+            let fali = Math.floor(Math.random() * alleVokabeln.length);
+            while (fali === rndi) { fali = Math.floor(Math.random() * alleVokabeln.length); }
+            const falscheVokabel = alleVokabeln[fali];
+
+            richtigesFutter = generiereZufallsPosition();
+            falschesFutter = generiereZufallsPosition();
+            while(richtigesFutter.x === falschesFutter.x && richtigesFutter.y === falschesFutter.y) {
+                falschesFutter = generiereZufallsPosition();
+            }
+
+            richtigesFutter.text = aktuelleFrage.es;
+            falschesFutter.text = falscheVokabel.es;
+        }
+
+        function generiereZufallsPosition() {
+            let pos;
+            let aufSchlange = true;
+            while(aufSchlange) {
+                pos = {
+                    x: Math.floor(Math.random() * (canvas.width / gridBox)) * gridBox,
+                    y: Math.floor(Math.random() * (canvas.height / gridBox)) * gridBox
+                };
+                aufSchlange = snake.some(s => s.x === pos.x && s.y === pos.y);
+            }
+            return pos;
+        }
+
+        // --- STEUERUNG: TASTATUR (PC) ---
+        document.addEventListener('keydown', e => {
+            const k = e.keyCode;
+            if ((k === 37 || k === 65) && dir !== "RIGHT") dir = "LEFT";
+            else if ((k === 38 || k === 87) && dir !== "DOWN") dir = "UP";
+            else if ((k === 39 || k === 68) && dir !== "LEFT") dir = "RIGHT";
+            else if ((k === 40 || k === 83) && dir !== "UP") dir = "DOWN";
+        });
+
+        // --- STEUERUNG: SWIPE-GESTEN (SMARTPHONE) ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            let touchEndX = e.changedTouches[0].screenX;
+            let touchEndY = e.changedTouches[0].screenY;
+            handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+        }, { passive: true });
+
+        function handleSwipe(x1, y1, x2, y2) {
+            const diffX = x2 - x1;
+            const diffY = y2 - y1;
+            const threshold = 30; // Mindest-Wischdistanz in Pixeln
+
+            // Prüfen, ob horizontaler oder vertikaler Wisch stärker war
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > threshold) {
+                    if (diffX > 0 && dir !== "LEFT") dir = "RIGHT";
+                    else if (diffX < 0 && dir !== "RIGHT") dir = "LEFT";
+                }
+            } else {
+                if (Math.abs(diffY) > threshold) {
+                    if (diffY > 0 && dir !== "UP") dir = "DOWN";
+                    else if (diffY < 0 && dir !== "DOWN") dir = "UP";
+                }
+            }
+        }
+
+        // --- GAME LOOP ---
+        function draw() {
+            ctx.fillStyle = "#0d0d13";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Futter zeichnen
+            ctx.fillStyle = "#f1c40f";
+            ctx.fillRect(richtigesFutter.x, richtigesFutter.y, gridBox - 1, gridBox - 1);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 13px sans-serif"; // Text minimal größer für mobile Lesbarkeit
+            ctx.fillText(richtigesFutter.text, richtigesFutter.x, richtigesFutter.y - 6);
+
+            ctx.fillStyle = "#f1c40f";
+            ctx.fillRect(falschesFutter.x, falschesFutter.y, gridBox - 1, gridBox - 1);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(falschesFutter.text, falschesFutter.x, falschesFutter.y - 6);
+
+            // Schlange zeichnen
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillStyle = (i === 0) ? "#3498db" : "#2980b9";
+                ctx.fillRect(snake[i].x, snake[i].y, gridBox - 1, gridBox - 1);
+            }
+
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+            if (dir === "LEFT") snakeX -= gridBox;
+            if (dir === "UP") snakeY -= gridBox;
+            if (dir === "RIGHT") snakeX += gridBox;
+            if (dir === "DOWN") snakeY += gridBox;
+
+            if (snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height) {
+                gameOver(); return;
+            }
+
+            for(let i = 0; i < snake.length; i++) {
+                if(snakeX === snake[i].x && snakeY === snake[i].y) { gameOver(); return; }
+            }
+
+            let newHead = { x: snakeX, y: snakeY };
+
+            if (snakeX === richtigesFutter.x && snakeY === richtigesFutter.y) {
+                score += 10;
+                document.getElementById('score-display').innerText = score;
+                snake.unshift(newHead);
+                neueRunde();
+            } else if (snakeX === falschesFutter.x && snakeY === falschesFutter.y) {
+                score = Math.max(0, score - 5);
+                document.getElementById('score-display').innerText = score;
+                
+                snake.unshift(newHead);
+                snake.pop(); 
+                if (snake.length > 2) { 
+                    snake.pop(); 
+                }
+                neueRunde();
+            } else {
+                snake.unshift(newHead);
+                snake.pop();
+            }
+        }
+
+        function gameOver() {
+            clearInterval(gameInterval);
+            showOverlay("Game Over! 💀", `Endstand: ${score} Punkte.`);
+            document.getElementById('overlay-button').innerText = "Erneut versuchen";
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vokabel Spiele Sammlung</title>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --secondary: #2196F3;
+            --bg-dark: #1e1e24;
+            --card-bg: #2a2a35;
+            --text: #ffffff;
+            --text-muted: #b0b0b5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            border-bottom: 2px solid #444;
+            padding-bottom: 8px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 40px;
+        }
+
+        /* Grid für Kategorien und Spiele */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        /* Buttons / Karten */
+        .btn {
+            background-color: var(--card-bg);
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 20px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            color: var(--text);
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover:not(.disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Kategorie Aktiv-Status */
+        .category-btn.active {
+            border-color: var(--primary);
+            background-color: rgba(76, 175, 80, 0.15);
+            color: var(--primary);
+        }
+
+        /* Spiele Sektion Deaktiviert-Status */
+        .disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .game-btn {
+            border-color: #444;
+        }
+        
+        .game-btn:not(.disabled) {
+            border-color: var(--secondary);
+            background-color: rgba(33, 150, 243, 0.05);
+        }
+
+        .game-btn:not(.disabled):hover {
+            background-color: var(--secondary);
+            color: #fff;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            background: #555;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-top: 8px;
+            color: var(--text-muted);
+        }
+
+        .game-btn:not(.disabled) .badge {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        #status-message {
+            background-color: #333;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>vocabuego 🦉</h1>
+        <p style="color: var(--text-muted);">Wähle zuerst eine Kategorie, um die Spiele freizuschalten!</p>
+    </header>
+
+    <div id="status-message" class="container">
+        Status: Bitte wähle eine Vokabel-Kategorie aus.
+    </div>
+
+    <div class="container">
+        <h2>1. Kategorie wählen</h2>
+        <div class="grid">
+            <div class="btn category-btn" onclick="selectCategory('Essen und Trinken', this)">
+                🍕 Essen & Trinken
+            </div>
+            <div class="btn category-btn" onclick="selectCategory('Fahrzeuge', this)">
+                🚗 Fahrzeuge
+            </div>
+            <div class="btn category-btn" onclick="selectCategory('Kleidung', this)">
+                👕 Kleidung
+            </div>
+            <div class="btn category-btn" onclick="selectCategory('Dating und Gefühle', this)">
+                💘 Dating & Gefühle
+            </div>
+            <div class="btn category-btn" onclick="selectCategory('Schule und Universität', this)">
+                🏫 Schule & Uni
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>2. Spielmodus wählen</h2>
+        
+        <p style="color: var(--text-muted); margin-top: 20px; font-weight: bold;">⭐ Spezial-Spiele (Themenbasiert)</p>
+        <div class="grid">
+            <div id="game-pizza" class="btn game-btn disabled" onclick="startGame('Pizza belegen')">
+                🍕 Pizza belegen
+                <span class="badge">Fokus: Essen</span>
+            </div>
+            <div id="game-highway" class="btn game-btn disabled" onclick="startGame('Highway to Bilingual')">
+                🛣️ Highway to Bilingual
+                <span class="badge">Fokus: Fahrzeuge</span>
+            </div>
+            <div id="game-koffer" class="btn game-btn disabled" onclick="startGame('Ich packe meinen Koffer')">
+                🧳 Koffer packen
+                <span class="badge">Fokus: Kleidung</span>
+            </div>
+            <div id="game-amor" class="btn game-btn disabled" onclick="startGame('Amors Pfeil')">
+                🏹 Amors Pfeil
+                <span class="badge">Fokus: Dating</span>
+            </div>
+        </div>
+
+        <p style="color: var(--text-muted); margin-top: 25px; font-weight: bold;">🎮 Allrounder-Spiele (Für jede Kategorie)</p>
+        <div class="grid">
+            <div class="btn game-btn generic-game disabled" onclick="startGame('Die Bibliothek')">
+                📚 Die Bibliothek
+                <span class="badge">Klassisch</span>
+            </div>
+            <div class="btn game-btn generic-game disabled" onclick="startGame('Quiz gegen die Zeit')">
+                ⏱️ Quiz gegen die Zeit
+                <span class="badge">Action</span>
+            </div>
+            <div class="btn game-btn generic-game disabled" onclick="startGame('Memory')">
+                🃏 Memory (10er Blöcke)
+                <span class="badge">Karten</span>
+            </div>
+            <div class="btn game-btn generic-game disabled" onclick="startGame('Snake II')">
+                🐍 Snake II
+                <span class="badge">Platzhalter</span>
+            </div>
+            <div class="btn game-btn generic-game disabled" onclick="startGame('Der Frosch')">
+                🐸 Der Frosch
+                <span class="badge">Platzhalter</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Speicher für die aktuell ausgewählte Kategorie
+        let aktuelleKategorie = null;
+
+        function selectCategory(kategorieName, element) {
+            // 1. Alle Kategorie-Buttons zurücksetzen
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // 2. Gewählten Button visuell hervorheben
+            element.classList.add('active');
+            aktuelleKategorie = kategorieName;
+
+            // 3. Statusmeldung aktualisieren
+            const statusBox = document.getElementById('status-message');
+            statusBox.style.color = '#4CAF50';
+            statusBox.innerText = `Aktiviert: "${kategorieName}" – Wähle jetzt ein Spiel!`;
+
+            // 4. Alle Spiele-Buttons zuerst sperren (Reset)
+            document.querySelectorAll('.game-btn').forEach(btn => {
+                btn.classList.add('disabled');
+            });
+
+            // 5. Die Allrounder-Spiele freischalten (gehen immer)
+            document.querySelectorAll('.generic-game').forEach(btn => {
+                btn.classList.remove('disabled');
+            });
+
+            // 6. Themen-Spezifische Spiele passend zur Kategorie freischalten
+            if (kategorieName === 'Essen und Trinken') {
+                document.getElementById('game-pizza').classList.remove('disabled');
+            } else if (kategorieName === 'Fahrzeuge') {
+                document.getElementById('game-highway').classList.remove('disabled');
+            } else if (kategorieName === 'Kleidung') {
+                document.getElementById('game-koffer').classList.remove('disabled');
+            } else if (kategorieName === 'Dating und Gefühle') {
+                document.getElementById('game-amor').classList.remove('disabled');
+            }
+        }
+
+        function startGame(spielName) {
+            // Prüfen, ob eine Kategorie gewählt wurde und das Spiel nicht "disabled" ist
+            const eventTarget = event.currentTarget;
+            if (eventTarget.classList.contains('disabled')) {
+                alert("Bitte wähle zuerst oben die passende Kategorie aus!");
+                return;
+            }
+
+            // Hier wird später eure Spiele-Engine gestartet
+            alert(`Spiel gestartet!\nModus: ${spielName}\nVokabelset: ${aktuelleKategorie}`);
+            
+            /* Tipp für später:
+               Hier leitet ihr dann auf die Spieleseite weiter, z.B.:
+               window.location.href = `spiel.html?game=${spielName}&category=${aktuelleKategorie}`;
+            */
+        }
+    </script>
+</body>
+</html>
