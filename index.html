@@ -167,10 +167,10 @@
     <div class="container">
         <h2>1. Wähle eine Vokabelkategorie:</h2>
         <div class="category-grid">
-            <button class="category-btn" onclick="waehleKategorie(this, 'reisen')">✈️ Reisen</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'essen')">🍕 Essen & Trinken</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'freizeit')">⚽ Freizeit & Sport</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'schule')">📚 Schule & Studium</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'Fahrzeuge')">✈️ Reisen</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'Essen und Trinken')">🍕 Essen & Trinken</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'Dating und Gefühle')">⚽ Freizeit & Sport</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'Schule und Universität')">📚 Schule & Studium</button>
         </div>
     </div>
 
@@ -229,7 +229,7 @@
          * Wird aufgerufen, wenn auf einen Kategorie-Button geklickt wird
          */
         function waehleKategorie(element, kategorieName) {
-            // 1. Speichere das Thema (z.B. 'reisen' oder 'essen')
+            // 1. Speichere das Thema (z.B. 'reisen' oder 'Essen und Trinken')
             aktuelleKategorie = kategorieName;
 
             // 2. Visuelles Feedback für die Buttons
@@ -265,8 +265,26 @@
                 return;
             }
 
-            // Weiterleitung mit dem korrekten Suchparameter (z.B. ?kategorie=reisen)
-            window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
+            // Robustheit: mapping von UI-Slugs / Anzeige-Namen auf die exakten Kategorien im JSON
+            const slugToCategory = {
+                reisen: "Fahrzeuge",
+                essen: "Essen und Trinken",
+                freizeit: "Dating und Gefühle",
+                schule: "Schule und Universität",
+                // falls schon die exakte Kategorie übergeben wurde, bleibt sie erhalten
+                "Essen und Trinken": "Essen und Trinken",
+                "Fahrzeuge": "Fahrzeuge",
+                "Kleidung": "Kleidung",
+                "Dating und Gefühle": "Dating und Gefühle",
+                "Schule und Universität": "Schule und Universität"
+            };
+
+            // Unterstütze sowohl Slugs als auch direkte Kategorie-Namen
+            const key = aktuelleKategorie;
+            const mapped = slugToCategory[key] || slugToCategory[key.toLowerCase()] || key;
+
+            // Weiterleitung mit dem korrekten Suchparameter (z.B. ?kategorie=Essen%20und%20Trinken)
+            window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(mapped)}`;
         }
     </script>
 
