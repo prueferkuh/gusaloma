@@ -105,7 +105,7 @@
             box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
         }
 
-        /* Spiele-Buttons */
+        /* Spiele-Liste */
         .game-list {
             display: flex;
             flex-direction: column;
@@ -136,7 +136,7 @@
         }
 
         .game-btn.disabled {
-            opacity: 0.4;
+            opacity: 0.3;
             cursor: not-allowed;
             border-color: #333;
             background: #1e1e26;
@@ -161,80 +161,111 @@
 
     <header>
         <h1>ViajeVocab ✈️</h1>
-        <p>Spanisch lernen leicht gemacht</p>
+        <p>Spanisch lernen spielerisch leicht</p>
     </header>
 
     <div class="container">
-        <h2>1. Wähle ein Thema aus:</h2>
+        <h2>1. Wähle eine Vokabelkategorie:</h2>
         <div class="category-grid">
-            <button class="category-btn" onclick="waehleKategorie(this, 'Reisen')">✈️ Reisen</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'Essen und Trinken')">🍕 Essen & Trinken</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'Freizeit und Sport')">⚽ Freizeit & Sport</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'Schule und Studium')">📚 Schule & Studium</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'reisen')">✈️ Reisen</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'essen')">🍕 Essen & Trinken</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'freizeit')">⚽ Freizeit & Sport</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'schule')">📚 Schule & Studium</button>
         </div>
     </div>
 
     <div class="container">
-        <h2>2. Wähle einen Spielmodus:</h2>
+        <h2>2. Wähle eine Spiele-Herausforderung:</h2>
         <div class="game-list">
             
             <button class="game-btn disabled" id="btn-quiz" onclick="startGame('Quiz gegen die Zeit')">
                 <span>⏱️ Quiz gegen die Zeit</span>
-                <span class="badge">Klassisch</span>
+                <span class="badge">Allrounder</span>
             </button>
 
             <button class="game-btn disabled" id="btn-snake" onclick="startGame('Snake II')">
                 <span>🐍 Snake II</span>
                 <span class="badge">Retro Action</span>
             </button>
+
+            <button class="game-btn disabled" id="btn-koffer" onclick="startGame('Ich packe meinen Koffer')">
+                <span>🧳 Ich packe meinen Koffer</span>
+                <span class="badge">Kleidung</span>
+            </button>
+
+            <button class="game-btn disabled" id="btn-pizza" onclick="startGame('Pizza belegen')">
+                <span>🍕 Pizza belegen</span>
+                <span class="badge">Essen</span>
+            </button>
+
+            <button class="game-btn disabled" id="btn-amors" onclick="startGame('Amors Pfeil')">
+                <span>💘 Amors Pfeil</span>
+                <span class="badge">Dating & Liebe</span>
+            </button>
+
+            <button class="game-btn disabled" id="btn-highway" onclick="startGame('Highway to Bilingual')">
+                <span>🚗 Highway to Bilingual</span>
+                <span class="badge">Fahrzeuge</span>
+            </button>
+
+            <button class="game-btn disabled" id="btn-frosch" onclick="startGame('Der Frosch')">
+                <span>🐸 Der Frosch</span>
+                <span class="badge">Natur & Tiere</span>
+            </button>
+
+            <button class="game-btn disabled" id="btn-memory" onclick="startGame('Memory')">
+                <span>🃏 Vokabel-Memory</span>
+                <span class="badge">Karten</span>
+            </button>
             
         </div>
     </div>
 
     <script>
-        // Diese Variable speichert global das vom Nutzer gewählte Thema ab
+        // Speichert das aktuell gewählte Thema ab
         let aktuelleKategorie = ""; 
 
         /**
-         * Wird aufgerufen, wenn der Nutzer auf einen Kategorie-Button drückt
+         * Wird aufgerufen, wenn auf einen Kategorie-Button geklickt wird
          */
         function waehleKategorie(element, kategorieName) {
-            // 1. Die globale Variable mit der neuen Auswahl überschreiben
+            // 1. Speichere das Thema (z.B. 'reisen' oder 'essen')
             aktuelleKategorie = kategorieName;
 
-            // 2. Visuelles Feedback: Markierung von alten Buttons entfernen, beim neuen hinzufügen
-            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            // 2. Visuelles Feedback für die Buttons
+            document.querySelectorAll('.category-grid .category-btn').forEach(btn => btn.classList.remove('active'));
             element.classList.add('active');
 
-            // 3. Die Spiele-Buttons freischalten (Klasse 'disabled' entfernen)
-            document.getElementById('btn-quiz').classList.remove('disabled');
-            document.getElementById('btn-snake').classList.remove('disabled');
+            // 3. ALLE Spiele-Buttons aktivieren (Klasse 'disabled' entfernen)
+            document.querySelectorAll('.game-list .game-btn').forEach(btn => {
+                btn.classList.remove('disabled');
+            });
         }
 
         /**
-         * Startet das jeweilige Spiel und übergibt die gewählte Kategorie per URL
+         * Verarbeitet den Spielstart und leitet mit dem URL-Parameter weiter
          */
         function startGame(spielName) {
-            // Sicherheitsprüfung: Falls die Buttons geklickt werden, obwohl sie noch gesperrt sind
+            // Schutzfunktion: Falls die Buttons gedrückt werden, bevor ein Thema gewählt ist
             if (!aktuelleKategorie) {
-                alert("Bitte wähle zuerst weiter oben ein Thema aus!");
+                alert("Bitte wähle zuerst oben eine passende Vokabelkategorie aus!");
                 return;
             }
 
             let dateiPfad = "";
 
-            // Pfade zu den HTML-Dateien im Ordner "spiele/" festlegen
+            // Pfade zu deinen tatsächlichen Spieldateien im Unterordner "spiele/"
             if (spielName === "Quiz gegen die Zeit") {
                 dateiPfad = "spiele/quiz-zeit.html";
             } else if (spielName === "Snake II") {
                 dateiPfad = "spiele/snake2.html";
             } else {
-                alert(`Das Spiel "${spielName}" befindet sich noch in der Entwicklung!`);
+                // Das fängt alle Platzhalter-Spiele ab, die du noch hochladen möchtest
+                alert(`Das Spiel "${spielName}" wird aktuell noch von uns entwickelt und steht bald bereit!`);
                 return;
             }
 
-            // Weiterleitung: Die gewählte Kategorie wird als URL-Parameter angehängt (?kategorie=...)
-            // encodeURIComponent sorgt dafür, dass Leerzeichen oder Sonderzeichen im Link nicht kaputtgehen
+            // Weiterleitung mit dem korrekten Suchparameter (z.B. ?kategorie=reisen)
             window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
         }
     </script>
