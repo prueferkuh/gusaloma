@@ -166,11 +166,8 @@
 
     <div class="container">
         <h2>1. Wähle eine Vokabelkategorie:</h2>
-        <div class="category-grid">
-            <button class="category-btn" onclick="waehleKategorie(this, 'Fahrzeuge')">✈️ Reisen</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'Essen und Trinken')">🍕 Essen & Trinken</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'Dating und Gefühle')">⚽ Freizeit & Sport</button>
-            <button class="category-btn" onclick="waehleKategorie(this, 'Schule und Universität')">📚 Schule & Studium</button>
+        <div class="category-grid" id="categoryGrid">
+            <!-- Wird dynamisch geladen -->
         </div>
     </div>
 
@@ -224,12 +221,40 @@
     <script>
         // Speichert das aktuell gewählte Thema ab
         let aktuelleKategorie = ""; 
+        let kategorien = [];
+
+        // Lade die Kategorien beim Laden der Seite
+        fetch('vokabeln.json')
+            .then(response => response.json())
+            .then(data => {
+                kategorien = data.map(item => item.kategorie);
+                renderKategorieButtons();
+            })
+            .catch(error => console.error('Fehler beim Laden der Kategorien:', error));
+
+        /**
+         * Rendert die Kategorie-Buttons dynamisch basierend auf JSON
+         */
+        function renderKategorieButtons() {
+            const categoryGrid = document.getElementById('categoryGrid');
+            categoryGrid.innerHTML = '';
+
+            kategorien.forEach(kategorie => {
+                const button = document.createElement('button');
+                button.className = 'category-btn';
+                button.textContent = kategorie;
+                button.onclick = function() {
+                    waehleKategorie(this, kategorie);
+                };
+                categoryGrid.appendChild(button);
+            });
+        }
 
         /**
          * Wird aufgerufen, wenn auf einen Kategorie-Button geklickt wird
          */
         function waehleKategorie(element, kategorieName) {
-            // 1. Speichere das Thema (z.B. 'reisen' oder 'Essen und Trinken')
+            // 1. Speichere das Thema
             aktuelleKategorie = kategorieName;
 
             // 2. Visuelles Feedback für die Buttons
@@ -265,26 +290,8 @@
                 return;
             }
 
-            // Robustheit: mapping von UI-Slugs / Anzeige-Namen auf die exakten Kategorien im JSON
-            const slugToCategory = {
-                reisen: "Fahrzeuge",
-                essen: "Essen und Trinken",
-                freizeit: "Dating und Gefühle",
-                schule: "Schule und Universität",
-                // falls schon die exakte Kategorie übergeben wurde, bleibt sie erhalten
-                "Essen und Trinken": "Essen und Trinken",
-                "Fahrzeuge": "Fahrzeuge",
-                "Kleidung": "Kleidung",
-                "Dating und Gefühle": "Dating und Gefühle",
-                "Schule und Universität": "Schule und Universität"
-            };
-
-            // Unterstütze sowohl Slugs als auch direkte Kategorie-Namen
-            const key = aktuelleKategorie;
-            const mapped = slugToCategory[key] || slugToCategory[key.toLowerCase()] || key;
-
-            // Weiterleitung mit dem korrekten Suchparameter (z.B. ?kategorie=Essen%20und%20Trinken)
-            window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(mapped)}`;
+            // Weiterleitung mit dem korrekten Suchparameter
+            window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
         }
     </script>
 
