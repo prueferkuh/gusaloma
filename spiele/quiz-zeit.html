@@ -1,1 +1,312 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quiz gegen die Zeit - Vokabel Edition</title>
+    <style>
+        :root { 
+            --primary: #3498db; 
+            --success: #2ecc71; 
+            --error: #e74c3c; 
+            --bg: #1a1a24; 
+            --panel-bg: #252532;
+            --dark: #ffffff; 
+            --text-muted: #b0b0b5;
+        }
+        
+        html, body {
+            overscroll-behavior-y: contain;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        body {
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .back-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 0;
+            align-self: flex-start;
+        }
+        
+        #app { 
+            background: var(--panel-bg); 
+            padding: 2rem; 
+            border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4); 
+            width: 100%; 
+            max-width: 500px; 
+            text-align: center; 
+            box-sizing: border-box;
+            border: 2px solid #333;
+        }
+        
+        /* UI Screens */
+        .screen { display: none; }
+        .active { display: block; }
+        
+        h1 { color: var(--primary); margin-bottom: 1.5rem; font-size: 1.8rem; }
+        p { color: var(--text-muted); }
+
+        .lvl-btn { 
+            width: 100%; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border: none; 
+            background: var(--primary); 
+            color: white; 
+            border-radius: 10px; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: transform 0.1s; 
+        }
+        .lvl-btn:active { transform: scale(0.98); }
+        
+        .stats-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            font-size: 0.9rem; 
+            color: var(--text-muted); 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid #444; 
+            padding-bottom: 10px; 
+        }
+        
+        .word-display { 
+            font-size: 2rem; 
+            font-weight: bold; 
+            margin: 15px 0; 
+            color: var(--dark); 
+            min-height: 60px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .options { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 12px; 
+            margin-top: 20px;
+        }
+        
+        .option-btn { 
+            padding: 15px; 
+            border: 2px solid #444; 
+            background: rgba(0,0,0,0.2); 
+            color: var(--dark);
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            font-weight: 600;
+            transition: all 0.2s; 
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .option-btn:hover { 
+            border-color: var(--primary); 
+            background: rgba(52, 152, 219, 0.1); 
+        }
+        
+        #speaker-btn { 
+            font-size: 2rem; 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            color: var(--primary); 
+            padding: 10px;
+            transition: transform 0.1s;
+        }
+        #speaker-btn:active { transform: scale(0.9); }
+
+        .back-btn { 
+            margin-top: 25px; 
+            background: none; 
+            border: none; 
+            color: var(--text-muted); 
+            cursor: pointer; 
+            text-decoration: underline; 
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="../index.html" class="back-link">← Menü</a>
+    
+<div id="app">
+    <div id="loading-screen" class="screen active">
+        <h1>Quiz gegen die Zeit ⏱️</h1>
+        <p id="loading-text">Lade Vokabeln der gewählten Kategorie...</p>
+        <button id="start-btn" class="lvl-btn" style="display:none;" onclick="startQuiz()">Spiel starten</button>
+    </div>
+
+    <div id="quiz-screen" class="screen">
+        <div class="stats-bar">
+            <span>Kat: <b id="current-lvl-name">-</b></span>
+            <span>⏱️ <span id="timer">00:00</span></span>
+            <span><span id="progress-idx">0</span>/50</span>
+        </div>
+        <button id="speaker-btn" onclick="speakWord()">🔊</button>
+        <div class="word-display" id="target-word">...</div>
+        <div class="options" id="options-container"></div>
+        <button class="back-btn" onclick="abortGame()">Abbrechen</button>
+    </div>
+
+    <div id="result-screen" class="screen">
+        <h1>Gratulation! 🎉</h1>
+        <p id="final-time-text"></p>
+        <button class="lvl-btn" onclick="redirectToMenu()">Zurück zum Hauptmenü</button>
+    </div>
+</div>
+
+<script>
+    let currentLvl = [];
+    let currentIndex = 0;
+    let seconds = 0;
+    let timerInterval;
+    let isSpanishToGerman = true;
+    let kategorieName = "Essen und Trinken"; // Fallback por defecto
+
+    // 1. Obtener la categoría de los parámetros URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('kategorie')) {
+        kategorieName = urlParams.get('kategorie');
+    }
+    document.getElementById('current-lvl-name').innerText = kategorieName;
+
+    // 2. Cargar el vocabulario dinámicamente desde la raíz del proyecto
+    fetch('../vokabeln.json')
+        .then(response => response.json())
+        .then(data => {
+            const katData = data.find(k => k.kategorie === kategorieName);
+            if (katData && katData.vokabeln.length >= 4) {
+                // Mezclar y tomar un máximo de 50 palabras para la sesión actual
+                currentLvl = [...katData.vokabeln].sort(() => Math.random() - 0.5).slice(0, 50);
+                
+                // Ocultar texto de carga y mostrar el botón de iniciar
+                document.getElementById('loading-text').innerText = `Kategorie "${kategorieName}" erfolgreich geladen. Bereit für 50 Vokabeln?`;
+                document.getElementById('start-btn').style.display = "block";
+            } else {
+                document.getElementById('loading-text').innerText = "Fehler: Kategorie nicht gefunden oder zu wenige Vokabeln im JSON.";
+            }
+        })
+        .catch(err => {
+            console.error("Fehler beim Laden des JSONs:", err);
+            document.getElementById('loading-text').innerText = "Fehler beim Laden der Vokabeldatei (vokabeln.json).";
+        });
+
+    function startQuiz() {
+        currentIndex = 0;
+        seconds = 0;
+        document.getElementById('timer').innerText = "00:00";
+        
+        changeScreen('quiz-screen');
+        startTimer();
+        loadQuestion();
+    }
+
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            seconds++;
+            let mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            let secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${mins}:${secs}`;
+        }, 1000);
+    }
+
+    function loadQuestion() {
+        if (currentIndex >= currentLvl.length) {
+            finishLevel();
+            return;
+        }
+
+        // Dirección aleatoria: 50% probabilidad Alemán->Español o Español->Alemán
+        isSpanishToGerman = Math.random() > 0.5;
+        const currentWord = currentLvl[currentIndex];
+        
+        document.getElementById('target-word').innerText = isSpanishToGerman ? currentWord.es : currentWord.de;
+        document.getElementById('progress-idx').innerText = currentIndex + 1;
+
+        // Generar las 4 opciones de respuesta utilizando el banco actual del nivel
+        let options = [currentWord];
+        while(options.length < 4) {
+            let rand = currentLvl[Math.floor(Math.random() * currentLvl.length)];
+            if(!options.map(o => o.id).includes(rand.id)) {
+                options.push(rand);
+            }
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        const container = document.getElementById('options-container');
+        container.innerHTML = "";
+        
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = "option-btn";
+            btn.innerText = isSpanishToGerman ? opt.de : opt.es;
+            
+            btn.onclick = () => {
+                if(opt.id === currentWord.id) {
+                    currentIndex++;
+                    loadQuestion();
+                } else {
+                    btn.style.borderColor = "var(--error)";
+                    btn.style.background = "rgba(231, 76, 60, 0.1)";
+                    setTimeout(() => {
+                        btn.style.borderColor = "#444";
+                        btn.style.background = "rgba(0,0,0,0.2)";
+                    }, 500);
+                }
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    function speakWord() {
+        const word = currentLvl[currentIndex];
+        if ('speechSynthesis' in window) {
+            const msg = new SpeechSynthesisUtterance(word.es);
+            msg.lang = 'es-ES';
+            window.speechSynthesis.speak(msg);
+        }
+    }
+
+    function finishLevel() {
+        clearInterval(timerInterval);
+        changeScreen('result-screen');
+        document.getElementById('final-time-text').innerText = `Du hast das Level in ${document.getElementById('timer').innerText} Minuten geschafft!`;
+    }
+
+    function abortGame() {
+        clearInterval(timerInterval);
+        redirectToMenu();
+    }
+
+    function redirectToMenu() {
+        window.location.href = "../index.html";
+    }
+
+    function changeScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+</script>
+
+</body>
+</html>
 
