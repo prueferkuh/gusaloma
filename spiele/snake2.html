@@ -149,7 +149,7 @@
         <div id="controls-hint">
             <strong>PC:</strong> Pfeiltasten / WASD | <strong>Smartphone:</strong> Wischen (Swipe)<br>
             Beide Wörter sehen gleich aus! Finde die richtige Übersetzung.<br>
-            Richtig = Wachsen (+10) | Falsch = Schrumpfen (-5)
+            <strong>Wände:</strong> Die Schlange kommt auf der gegenüberliegenden Seite wieder heraus!
         </div>
     </div>
 
@@ -187,12 +187,13 @@
         fetch('../vokabeln.json')
             .then(response => response.json())
             .then(data => {
-                const katData = data.find(k => k.kategorie === kategorieName);
+                // Absicherung gegen fehlerhafte Groß-/Kleinschreibung auf GitHub
+                const katData = data.find(k => k.kategorie.toLowerCase().trim() === kategorieName.toLowerCase().trim());
                 if (katData && katData.vokabeln.length > 1) {
                     alleVokabeln = katData.vokabeln;
-                    showOverlay("Snake II: Multiplatform", "Beide Futterpunkte sehen gleich aus! Auf dem Smartphone steuerst du einfach per Wischbewegung (Swipe). Legen wir los?");
+                    showOverlay("Snake II: Teleportationaktiv", "Die Schlange kann durch die Bildschirmränder wandern! Beide Futterpunkte sehen gleich aus. Finde das richtige Wort.");
                 } else {
-                    alert("Kategorie nicht gefunden!");
+                    alert("Kategorie nicht gefunden! Gesucht wurde: " + kategorieName);
                 }
             })
             .catch(err => console.error("Fehler beim Laden:", err));
@@ -282,9 +283,8 @@
         function handleSwipe(x1, y1, x2, y2) {
             const diffX = x2 - x1;
             const diffY = y2 - y1;
-            const threshold = 30; // Mindest-Wischdistanz in Pixeln
+            const threshold = 30;
 
-            // Prüfen, ob horizontaler oder vertikaler Wisch stärker war
             if (Math.abs(diffX) > Math.abs(diffY)) {
                 if (Math.abs(diffX) > threshold) {
                     if (diffX > 0 && dir !== "LEFT") dir = "RIGHT";
@@ -307,7 +307,7 @@
             ctx.fillStyle = "#f1c40f";
             ctx.fillRect(richtigesFutter.x, richtigesFutter.y, gridBox - 1, gridBox - 1);
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 13px sans-serif"; // Text minimal größer für mobile Lesbarkeit
+            ctx.font = "bold 13px sans-serif";
             ctx.fillText(richtigesFutter.text, richtigesFutter.x, richtigesFutter.y - 6);
 
             ctx.fillStyle = "#f1c40f";
@@ -328,10 +328,20 @@
             if (dir === "RIGHT") snakeX += gridBox;
             if (dir === "DOWN") snakeY += gridBox;
 
-            if (snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height) {
-                gameOver(); return;
+            // --- NEU: PAC-MAN WRAP-AROUND EFFEKT ---
+            if (snakeX < 0) {
+                snakeX = canvas.width - gridBox;
+            } else if (snakeX >= canvas.width) {
+                snakeX = 0;
             }
 
+            if (snakeY < 0) {
+                snakeY = canvas.height - gridBox;
+            } else if (snakeY >= canvas.height) {
+                snakeY = 0;
+            }
+
+            // Kollisionsprüfung mit dem eigenen Körper bleibt bestehen
             for(let i = 0; i < snake.length; i++) {
                 if(snakeX === snake[i].x && snakeY === snake[i].y) { gameOver(); return; }
             }
@@ -361,7 +371,7 @@
 
         function gameOver() {
             clearInterval(gameInterval);
-            showOverlay("Game Over! 💀", `Endstand: ${score} Punkte.`);
+            showOverlay("Game Over! 💀", `Du hast dich selbst gebissen. Endstand: ${score} Punkte.`);
             document.getElementById('overlay-button').innerText = "Erneut versuchen";
         }
     </script>
