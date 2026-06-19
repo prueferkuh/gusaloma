@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vokabel-Memory</title>
+    <style>
+        :root {
+            --bg-color: #1a1a24;
+            --panel-bg: #252532;
+            --accent-blue: #3498db;
+            --accent-gold: #f1c40f;
+            --accent-green: #2ecc71;
+            --text-color: #ffffff;
+            --card-back: #2c3e50;
+        }
+
+        html, body {
+            overscroll-behavior-y: contain;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        body {
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .back-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 0;
+            align-self: flex-start;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid #333;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #info-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        /* Das Memory-Grid */
+        #memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* Anpassung der Spalten je nach Kartenzahl für bessere Optik */
+        @media (min-width: 600px) {
+            #memory-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+
+        /* Die Memory-Karte */
+        .card {
+            background-color: var(--card-back);
+            border: 2px solid #444;
+            border-radius: 8px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 5px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s, background-color 0.2s;
+            box-sizing: border-box;
+            color: transparent; /* Text unsichtbar, wenn verdeckt */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card.flipped {
+            background-color: #fff;
+            color: #1a1a24;
+            transform: scale(1.03);
+            border-color: var(--accent-blue);
+        }
+
+        .card.matched {
+            background-color: var(--accent-green);
+            color: white;
+            cursor: default;
+            visibility: visible;
+            opacity: 0.6;
+            border-color: transparent;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .overlay-box {
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid var(--accent-gold);
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
+        }
+
+        .size-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .size-buttons button {
+            background: rgba(0,0,0,0.3);
+            color: white;
+            border: 2px solid var(--accent-blue);
+            padding: 15px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .size-buttons button:hover {
+            background: var(--accent-blue);
+        }
+
+        #restart-btn {
+            background: var(--accent-gold);
+            color: #1a1a24;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="../index.html" class="back-link">← Menü</a>
+    
+    <div id="game-container">
+        <div id="info-panel">
+            <div>Kat: <span id="current-category" style="color:var(--accent-blue);">Lade...</span></div>
+            <div>Versuche: <span id="turns-display" style="font-weight:bold; color:var(--accent-gold);">0</span></div>
+            <div>Paare: <span id="matches-display" style="font-weight:bold; color:var(--accent-green);">0/0</span></div>
+        </div>
+        
+        <div id="memory-grid"></div>
+    </div>
+
+    <div id="start-overlay" class="overlay">
+        <div class="overlay-box">
+            <h2 style="color:var(--accent-gold); margin-top:0;">Vokabel-Memory 🃏</h2>
+            <p id="overlay-text">Wie viele Wörter möchtest du lernen? (Kartenanzahl = Doppelte Wortanzahl)</p>
+            
+            <div class="size-buttons">
+                <button onclick="selectWordCount(10)">10 Worte (20 Karten)</button>
+                <button onclick="selectWordCount(15)">15 Worte (30 Karten)</button>
+                <button onclick="selectWordCount(20)">20 Worte (40 Karten)</button>
+                <button onclick="selectWordCount(25)">25 Worte (50 Karten)</button>
+            </div>
+            <button id="restart-btn" onclick="location.reload()">Nochmal spielen</button>
+        </div>
+    </div>
+
+    <script>
+        let alleVokabeln = [];
+        let memoryKarten = [];
+        let gewaehlteKarten = [];
+        let turns = 0;
+        let matches = 0;
+        let maxPairs = 10;
+        let lockGrid = false;
+        let kategorieName = "reisen"; // Fallback
+
+        // 1. Kategorie aus der URL holen
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('kategorie')) {
+            kategorieName = urlParams.get('kategorie');
+        }
+        document.getElementById('current-category').innerText = kategorieName;
+
+        // 2. Vokabeln laden
+        fetch('../vokabeln.json')
+            .then(response => response.json())
+            .then(data => {
+                const katData = data.find(k => k.kategorie === kategorieName);
+                if (katData && katData.vokabeln.length >= 10) {
+                    alleVokabeln = katData.vokabeln;
+                    // Das Overlay bleibt offen, bis der User die Wortanzahl klickt
+                } else {
+                    document.getElementById('overlay-text').innerText = "Fehler: Kategorie nicht gefunden oder zu wenige Vokabeln im JSON.";
+                    document.querySelector('.size-buttons').style.display = 'none';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('overlay-text').innerText = "Fehler beim Laden der vokabeln.json.";
+            });
+
+        /**
+         * Wird aufgerufen, wenn der Spieler die Wortanzahl wählt
+         */
+        function selectWordCount(anzahl) {
+            // Falls das JSON weniger Vokabeln hat als gewählt, drosseln wir das Limit
+            maxPairs = Math.min(anzahl, alleVokabeln.length);
+            
+            document.getElementById('start-overlay').style.display = 'none';
+            initGame();
+        }
+
+        /**
+         * Initialisiert das Spielfeld
+         */
+        function initGame() {
+            turns = 0;
+            matches = 0;
+            gewaehlteKarten = [];
+            lockGrid = false;
+            
+            document.getElementById('turns-display').innerText = turns;
+            document.getElementById('matches-display').innerText = `0/${maxPairs}`;
+
+            // 1. Zufällige Vokabeln für diese Runde auswählen
+            const shuffledVokabeln = [...alleVokabeln].sort(() => Math.random() - 0.5);
+            const rundeVokabeln = shuffledVokabeln.slice(0, maxPairs);
+
+            // 2. Pärchen erzeugen (eine Karte DE, eine ES, beide teilen dieselbe ID)
+            memoryKarten = [];
+            rundeVokabeln.forEach(vok => {
+                memoryKarten.push({ id: vok.id, text: vok.de, sprache: 'de' });
+                memoryKarten.push({ id: vok.id, text: vok.es, sprache: 'es' });
+            });
+
+            // 3. Karten komplett durchmischen
+            memoryKarten.sort(() => Math.random() - 0.5);
+
+            // 4. Grid im HTML aufbauen
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = "";
+
+            memoryKarten.forEach((karte, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card');
+                cardElement.dataset.index = index;
+                cardElement.innerText = karte.text;
+                cardElement.addEventListener('click', flipCard);
+                grid.appendChild(cardElement);
+            });
+        }
+
+        /**
+         * Dreht eine Karte um
+         */
+        function flipCard() {
+            if (lockGrid) return;
+            const clickedCard = this;
+            
+            // Verhindern, dass bereits umgedrehte oder gelöste Karten geklickt werden
+            if (clickedCard.classList.contains('flipped') || clickedCard.classList.contains('matched')) return;
+
+            clickedCard.classList.add('flipped');
+            gewaehlteKarten.push(clickedCard);
+
+            // Wenn zwei Karten aufgedeckt sind, Match prüfen
+            if (gewaehlteKarten.length === 2) {
+                checkMatch();
+            }
+        }
+
+        /**
+         * Prüft, ob die zwei aufgedeckten Karten zusammenpassen
+         */
+        function checkMatch() {
+            lockGrid = true;
+            turns++;
+            document.getElementById('turns-display').innerText = turns;
+
+            const karte1Data = memoryKarten[gewaehlteKarten[0].dataset.index];
+            const karte2Data = memoryKarten[gewaehlteKarten[1].dataset.index];
+
+            // Ein Match ist es, wenn die IDs gleich sind, aber die Sprachen unterschiedlich!
+            if (karte1Data.id === karte2Data.id && karte1Data.sprache !== karte2Data.sprache) {
+                // Erfolg!
+                setTimeout(() => {
+                    gewaehlteKarten[0].classList.add('matched');
+                    gewaehlteKarten[1].classList.add('matched');
+                    
+                    matches++;
+                    document.getElementById('matches-display').innerText = `${matches}/${maxPairs}`;
+                    
+                    gewaehlteKarten = [];
+                    lockGrid = false;
+
+                    // Gewinn-Prüfung
+                    if (matches === maxPairs) {
+                        gameOver();
+                    }
+                }, 400);
+            } else {
+                // Kein Match -> Karten nach kurzer Zeit wieder umdrehen
+                setTimeout(() => {
+                    gewaehlteKarten[0].classList.remove('flipped');
+                    gewaehlteKarten[1].classList.remove('flipped');
+                    
+                    gewaehlteKarten = [];
+                    lockGrid = false;
+                }, 1200);
+            }
+        }
+
+        /**
+         * Wird aufgerufen, wenn alle Paare gefunden wurden
+         */
+        function gameOver() {
+            document.getElementById('overlay-title');
+            document.getElementById('overlay-text').innerHTML = `<h3>Gewonnen! 🎉</h3>Du hast alle ${maxPairs} Paare in <strong>${turns} Versuchen</strong> gefunden.`;
+            document.querySelector('.size-buttons').style.display = 'none';
+            document.getElementById('restart-btn').style.display = 'block';
+            document.getElementById('start-overlay').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
