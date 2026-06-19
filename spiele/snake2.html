@@ -162,218 +162,231 @@
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const gridBox = 20;
-        
-        let snake = [];
-        let dir = "RIGHT";
-        let score = 0;
-        let gameInterval = null;
-        let speed = 130;
+            const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gridBox = 20;
+    
+    let snake = [];
+    let dir = "RIGHT";
+    let score = 0;
+    let gameInterval = null;
+    let speed = 130;
 
-        let alleVokabeln = [];
-        let aktuelleFrage = null;
-        let richtigesFutter = null;
-        let falschesFutter = null;
-        let kategorieName = "Essen und Trinken";
+    let alleVokabeln = [];
+    let aktuelleFrage = null;
+    let richtigesFutter = null;
+    let falschesFutter = null;
+    let kategorieName = "Essen und Trinken";
 
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('kategorie')) {
-            kategorieName = urlParams.get('kategorie');
-        }
-        document.getElementById('current-category').innerText = kategorieName;
+    // 1. Kategorie aus der URL holen (Exakt wie im Quiz)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('kategorie')) {
+        kategorieName = urlParams.get('kategorie');
+    }
+    document.getElementById('current-category').innerText = kategorieName;
 
-        fetch('../vokabeln.json')
-            .then(response => response.json())
-            .then(data => {
-                // Absicherung gegen fehlerhafte Groß-/Kleinschreibung auf GitHub
-                const katData = data.find(k => k.kategorie.toLowerCase().trim() === kategorieName.toLowerCase().trim());
-                if (katData && katData.vokabeln.length > 1) {
-                    alleVokabeln = katData.vokabeln;
-                    showOverlay("Snake II: Teleportationaktiv", "Die Schlange kann durch die Bildschirmränder wandern! Beide Futterpunkte sehen gleich aus. Finde das richtige Wort.");
-                } else {
-                    alert("Kategorie nicht gefunden! Gesucht wurde: " + kategorieName);
-                }
-            })
-            .catch(err => console.error("Fehler beim Laden:", err));
-
-        function showOverlay(title, text) {
-            document.getElementById('overlay-title').innerText = title;
-            document.getElementById('overlay-text').innerText = text;
-            document.getElementById('game-overlay').style.display = 'flex';
-        }
-
-        function closeOverlayAndStart() {
-            document.getElementById('game-overlay').style.display = 'none';
-            initGame();
-        }
-
-        function initGame() {
-            snake = [
-                {x: 10 * gridBox, y: 10 * gridBox},
-                {x: 9 * gridBox, y: 10 * gridBox},
-                {x: 8 * gridBox, y: 10 * gridBox}
-            ];
-            dir = "RIGHT";
-            score = 0;
-            document.getElementById('score-display').innerText = score;
-            neueRunde();
-            
-            if (gameInterval) clearInterval(gameInterval);
-            gameInterval = setInterval(draw, speed);
-        }
-
-        function neueRunde() {
-            const rndi = Math.floor(Math.random() * alleVokabeln.length);
-            aktuelleFrage = alleVokabeln[rndi];
-            document.getElementById('task-display').innerText = `Gesucht: "${aktuelleFrage.de}"`;
-
-            let fali = Math.floor(Math.random() * alleVokabeln.length);
-            while (fali === rndi) { fali = Math.floor(Math.random() * alleVokabeln.length); }
-            const falscheVokabel = alleVokabeln[fali];
-
-            richtigesFutter = generiereZufallsPosition();
-            falschesFutter = generiereZufallsPosition();
-            while(richtigesFutter.x === falschesFutter.x && richtigesFutter.y === falschesFutter.y) {
-                falschesFutter = generiereZufallsPosition();
+    // 2. Vokabeln laden (Exakt dieselbe Logik wie im funktionierenden Quiz!)
+    fetch('../vokabeln.json')
+        .then(response => response.json())
+        .then(data => {
+            const katData = data.find(k => k.kategorie === kategorieName);
+            if (katData && katData.vokabeln.length >= 2) { // Mindestens 2 Vokabeln für richtig/falsch benötigt
+                alleVokabeln = katData.vokabeln;
+                
+                // Overlay anzeigen, wenn Laden erfolgreich
+                showOverlay("Snake II: Teleportation aktiv", `Kategorie "${kategorieName}" geladen. Beide Futterpunkte sehen gleich aus. Nutze Swipe oder Pfeiltasten!`);
+            } else {
+                showOverlay("Fehler ❌", `Kategorie "${kategorieName}" nicht gefunden oder zu wenige Vokabeln.`);
             }
-
-            richtigesFutter.text = aktuelleFrage.es;
-            falschesFutter.text = falscheVokabel.es;
-        }
-
-        function generiereZufallsPosition() {
-            let pos;
-            let aufSchlange = true;
-            while(aufSchlange) {
-                pos = {
-                    x: Math.floor(Math.random() * (canvas.width / gridBox)) * gridBox,
-                    y: Math.floor(Math.random() * (canvas.height / gridBox)) * gridBox
-                };
-                aufSchlange = snake.some(s => s.x === pos.x && s.y === pos.y);
-            }
-            return pos;
-        }
-
-        // --- STEUERUNG: TASTATUR (PC) ---
-        document.addEventListener('keydown', e => {
-            const k = e.keyCode;
-            if ((k === 37 || k === 65) && dir !== "RIGHT") dir = "LEFT";
-            else if ((k === 38 || k === 87) && dir !== "DOWN") dir = "UP";
-            else if ((k === 39 || k === 68) && dir !== "LEFT") dir = "RIGHT";
-            else if ((k === 40 || k === 83) && dir !== "UP") dir = "DOWN";
+        })
+        .catch(err => {
+            console.error("Fehler beim Laden des JSONs:", err);
+            showOverlay("Fehler ❌", "vokabeln.json konnte nicht geladen werden.");
         });
 
-        // --- STEUERUNG: SWIPE-GESTEN (SMARTPHONE) ---
-        let touchStartX = 0;
-        let touchStartY = 0;
+    function showOverlay(title, text) {
+        document.getElementById('overlay-title').innerText = title;
+        document.getElementById('overlay-text').innerText = text;
+        document.getElementById('game-overlay').style.display = 'flex';
+    }
 
-        document.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
+    function closeOverlayAndStart() {
+        document.getElementById('game-overlay').style.display = 'none';
+        initGame();
+    }
 
-        document.addEventListener('touchend', e => {
-            let touchEndX = e.changedTouches[0].screenX;
-            let touchEndY = e.changedTouches[0].screenY;
-            handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
-        }, { passive: true });
+    function initGame() {
+        snake = [
+            {x: 10 * gridBox, y: 10 * gridBox},
+            {x: 9 * gridBox, y: 10 * gridBox},
+            {x: 8 * gridBox, y: 10 * gridBox}
+        ];
+        dir = "RIGHT";
+        score = 0;
+        document.getElementById('score-display').innerText = score;
+        neueRunde();
+        
+        if (gameInterval) clearInterval(gameInterval);
+        gameInterval = setInterval(draw, speed);
+    }
 
-        function handleSwipe(x1, y1, x2, y2) {
-            const diffX = x2 - x1;
-            const diffY = y2 - y1;
-            const threshold = 30;
+    function neueRunde() {
+        if (alleVokabeln.length < 2) return;
 
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > threshold) {
-                    if (diffX > 0 && dir !== "LEFT") dir = "RIGHT";
-                    else if (diffX < 0 && dir !== "RIGHT") dir = "LEFT";
-                }
-            } else {
-                if (Math.abs(diffY) > threshold) {
-                    if (diffY > 0 && dir !== "UP") dir = "DOWN";
-                    else if (diffY < 0 && dir !== "DOWN") dir = "UP";
-                }
-            }
+        // Zufällige richtige Vokabel wählen
+        const rndi = Math.floor(Math.random() * alleVokabeln.length);
+        aktuelleFrage = alleVokabeln[rndi];
+        document.getElementById('task-display').innerText = `Gesucht: "${aktuelleFrage.de}"`;
+
+        // Zufällige falsche Vokabel wählen (darf nicht dieselbe ID wie die richtige haben!)
+        let fali = Math.floor(Math.random() * alleVokabeln.length);
+        // Nutzt den ID-Vergleich aus eurem Quiz-System:
+        while (alleVokabeln[fali].id === aktuelleFrage.id || fali === rndi) { 
+            fali = Math.floor(Math.random() * alleVokabeln.length); 
+        }
+        const falscheVokabel = alleVokabeln[fali];
+
+        richtigesFutter = generiereZufallsPosition();
+        falschesFutter = generiereZufallsPosition();
+        while(richtigesFutter.x === falschesFutter.x && richtigesFutter.y === falschesFutter.y) {
+            falschesFutter = generiereZufallsPosition();
         }
 
-        // --- GAME LOOP ---
-        function draw() {
-            ctx.fillStyle = "#0d0d13";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Texte und ID-Referenzen an das Futter hängen
+        richtigesFutter.text = aktuelleFrage.es;
+        richtigesFutter.vokabelId = aktuelleFrage.id; // ID merken!
 
-            // Futter zeichnen
-            ctx.fillStyle = "#f1c40f";
-            ctx.fillRect(richtigesFutter.x, richtigesFutter.y, gridBox - 1, gridBox - 1);
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 13px sans-serif";
-            ctx.fillText(richtigesFutter.text, richtigesFutter.x, richtigesFutter.y - 6);
+        falschesFutter.text = falscheVokabel.es;
+        falschesFutter.vokabelId = falscheVokabel.id; // ID merken!
+    }
 
-            ctx.fillStyle = "#f1c40f";
-            ctx.fillRect(falschesFutter.x, falschesFutter.y, gridBox - 1, gridBox - 1);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(falschesFutter.text, falschesFutter.x, falschesFutter.y - 6);
+    function generiereZufallsPosition() {
+        let pos;
+        let aufSchlange = true;
+        while(aufSchlange) {
+            pos = {
+                x: Math.floor(Math.random() * (canvas.width / gridBox)) * gridBox,
+                y: Math.floor(Math.random() * (canvas.height / gridBox)) * gridBox
+            };
+            aufSchlange = snake.some(s => s.x === pos.x && s.y === pos.y);
+        }
+        return pos;
+    }
 
-            // Schlange zeichnen
-            for (let i = 0; i < snake.length; i++) {
-                ctx.fillStyle = (i === 0) ? "#3498db" : "#2980b9";
-                ctx.fillRect(snake[i].x, snake[i].y, gridBox - 1, gridBox - 1);
+    // --- STEUERUNG: TASTATUR (PC) ---
+    document.addEventListener('keydown', e => {
+        const k = e.keyCode;
+        if ((k === 37 || k === 65) && dir !== "RIGHT") dir = "LEFT";
+        else if ((k === 38 || k === 87) && dir !== "DOWN") dir = "UP";
+        else if ((k === 39 || k === 68) && dir !== "LEFT") dir = "RIGHT";
+        else if ((k === 40 || k === 83) && dir !== "UP") dir = "DOWN";
+    });
+
+    // --- STEUERUNG: SWIPE-GESTEN (SMARTPHONE) ---
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+        let touchEndX = e.changedTouches[0].screenX;
+        let touchEndY = e.changedTouches[0].screenY;
+        handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+    }, { passive: true });
+
+    function handleSwipe(x1, y1, x2, y2) {
+        const diffX = x2 - x1;
+        const diffY = y2 - y1;
+        const threshold = 30;
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            if (Math.abs(diffX) > threshold) {
+                if (diffX > 0 && dir !== "LEFT") dir = "RIGHT";
+                else if (diffX < 0 && dir !== "RIGHT") dir = "LEFT";
             }
-
-            let snakeX = snake[0].x;
-            let snakeY = snake[0].y;
-            if (dir === "LEFT") snakeX -= gridBox;
-            if (dir === "UP") snakeY -= gridBox;
-            if (dir === "RIGHT") snakeX += gridBox;
-            if (dir === "DOWN") snakeY += gridBox;
-
-            // --- NEU: PAC-MAN WRAP-AROUND EFFEKT ---
-            if (snakeX < 0) {
-                snakeX = canvas.width - gridBox;
-            } else if (snakeX >= canvas.width) {
-                snakeX = 0;
+        } else {
+            if (Math.abs(diffY) > threshold) {
+                if (diffY > 0 && dir !== "UP") dir = "DOWN";
+                else if (diffY < 0 && dir !== "DOWN") dir = "UP";
             }
+        }
+    }
 
-            if (snakeY < 0) {
-                snakeY = canvas.height - gridBox;
-            } else if (snakeY >= canvas.height) {
-                snakeY = 0;
-            }
+    // --- GAME LOOP ---
+    function draw() {
+        ctx.fillStyle = "#0d0d13";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Kollisionsprüfung mit dem eigenen Körper bleibt bestehen
-            for(let i = 0; i < snake.length; i++) {
-                if(snakeX === snake[i].x && snakeY === snake[i].y) { gameOver(); return; }
-            }
+        // Futter Punkte zeichnen
+        ctx.fillStyle = "#f1c40f";
+        ctx.fillRect(richtigesFutter.x, richtigesFutter.y, gridBox - 1, gridBox - 1);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 13px sans-serif";
+        ctx.fillText(richtigesFutter.text, richtigesFutter.x, richtigesFutter.y - 6);
 
-            let newHead = { x: snakeX, y: snakeY };
+        ctx.fillStyle = "#f1c40f";
+        ctx.fillRect(falschesFutter.x, falschesFutter.y, gridBox - 1, gridBox - 1);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(falschesFutter.text, falschesFutter.x, falschesFutter.y - 6);
 
-            if (snakeX === richtigesFutter.x && snakeY === richtigesFutter.y) {
-                score += 10;
-                document.getElementById('score-display').innerText = score;
-                snake.unshift(newHead);
-                neueRunde();
-            } else if (snakeX === falschesFutter.x && snakeY === falschesFutter.y) {
-                score = Math.max(0, score - 5);
-                document.getElementById('score-display').innerText = score;
-                
-                snake.unshift(newHead);
+        // Schlange zeichnen
+        for (let i = 0; i < snake.length; i++) {
+            ctx.fillStyle = (i === 0) ? "#3498db" : "#2980b9";
+            ctx.fillRect(snake[i].x, snake[i].y, gridBox - 1, gridBox - 1);
+        }
+
+        let snakeX = snake[0].x;
+        let snakeY = snake[0].y;
+        if (dir === "LEFT") snakeX -= gridBox;
+        if (dir === "UP") snakeY -= gridBox;
+        if (dir === "RIGHT") snakeX += gridBox;
+        if (dir === "DOWN") snakeY += gridBox;
+
+        // Pac-Man Wrap-Around Effekt
+        if (snakeX < 0) snakeX = canvas.width - gridBox;
+        else if (snakeX >= canvas.width) snakeX = 0;
+
+        if (snakeY < 0) snakeY = canvas.height - gridBox;
+        else if (snakeY >= canvas.height) snakeY = 0;
+
+        // Selbstbiss-Prüfung
+        for(let i = 0; i < snake.length; i++) {
+            if(snakeX === snake[i].x && snakeY === snake[i].y) { gameOver(); return; }
+        }
+
+        let newHead = { x: snakeX, y: snakeY };
+
+        // Kollision mit Futter prüfen (Vergleich via ID analog zum Quiz!)
+        if (snakeX === richtigesFutter.x && snakeY === richtigesFutter.y) {
+            score += 10;
+            document.getElementById('score-display').innerText = score;
+            snake.unshift(newHead);
+            neueRunde();
+        } else if (snakeX === falschesFutter.x && snakeY === falschesFutter.y) {
+            score = Math.max(0, score - 5);
+            document.getElementById('score-display').innerText = score;
+            
+            snake.unshift(newHead);
+            snake.pop(); 
+            if (snake.length > 2) { 
                 snake.pop(); 
-                if (snake.length > 2) { 
-                    snake.pop(); 
-                }
-                neueRunde();
-            } else {
-                snake.unshift(newHead);
-                snake.pop();
             }
+            neueRunde();
+        } else {
+            snake.unshift(newHead);
+            snake.pop();
         }
+    }
 
-        function gameOver() {
-            clearInterval(gameInterval);
-            showOverlay("Game Over! 💀", `Du hast dich selbst gebissen. Endstand: ${score} Punkte.`);
-            document.getElementById('overlay-button').innerText = "Erneut versuchen";
-        }
+    function gameOver() {
+        clearInterval(gameInterval);
+        showOverlay("Game Over! 💀", `Endstand: ${score} Punkte.`);
+        document.getElementById('overlay-button').innerText = "Erneut versuchen";
+    }
+
     </script>
 </body>
 </html>
