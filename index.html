@@ -269,6 +269,8 @@
 
         /**
          * Verarbeitet den Spielstart und leitet mit dem URL-Parameter weiter
+         * Robuste Variante: prüft zuerst, ob die Zielseite tatsächlich existiert (HEAD/GET),
+         * bevor auf sie weitergeleitet wird. So entstehen keine toten Links.
          */
         function startGame(spielName) {
             // Schutzfunktion: Falls die Buttons gedrückt werden, bevor ein Thema gewählt ist
@@ -284,7 +286,7 @@
                 dateiPfad = "spiele/quiz-zeit.html";
             } else if (spielName === "Snake II") {
                 dateiPfad = "spiele/snake2.html";
-            } else if (spielName === "Vokabel-Memory") {
+            } else if (spielName === "Memory" || spielName === "Vokabel-Memory") {
                 dateiPfad = "spiele/memory.html";
             } else {
                 // Das fängt alle Platzhalter-Spiele ab, die du noch hochladen möchtest
@@ -292,8 +294,32 @@
                 return;
             }
 
-            // Weiterleitung mit dem korrekten Suchparameter
-            window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
+            // Wenn kein Pfad bestimmt wurde (extra Vorsicht), abbrechen
+            if (!dateiPfad) {
+                alert(`Kein Pfad für das Spiel "${spielName}" gefunden.`);
+                return;
+            }
+
+            // Prüfen, ob die Datei existiert (HEAD bevorzugt, Fallback auf GET)
+            fetch(dateiPfad, { method: 'HEAD' })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
+                    } else {
+                        alert(`Das Spiel "${spielName}" ist derzeit nicht verfügbar (Seite ${dateiPfad} fehlt).`);
+                    }
+                })
+                .catch(() => {
+                    // Manche Server blocken HEAD; versuche GET als Fallback
+                    fetch(dateiPfad)
+                        .then(r => {
+                            if (r.ok) window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
+                            else alert(`Das Spiel "${spielName}" ist derzeit nicht verfügbar (Seite ${dateiPfad} fehlt).`);
+                        })
+                        .catch(() => {
+                            alert(`Das Spiel "${spielName}" ist derzeit nicht verfügbar (Seite ${dateiPfad} fehlt).`);
+                        });
+                });
         }
     </script>
 
