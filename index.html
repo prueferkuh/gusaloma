@@ -205,7 +205,7 @@
             </div>
             <a href="https://prueferkuh.github.io/gusaloma/spiele/snake2.html" target="_blank" class="btn game-btn generic-game">
                 🐍 Snake II
-                <span class="badge">Platzhalter</span>
+                <span class="badge">Snake2 Klon</span>
             </a>
             <div class="btn game-btn generic-game disabled" onclick="startGame('Der Frosch')">
                 🐸 Der Frosch
@@ -256,21 +256,37 @@
         }
 
         function startGame(spielName) {
-            // Prüfen, ob eine Kategorie gewählt wurde und das Spiel nicht "disabled" ist
-            const eventTarget = event.currentTarget;
-            if (eventTarget.classList.contains('disabled')) {
-                alert("Bitte wähle zuerst oben die passende Kategorie aus!");
-                return;
-            }
+    // Prüfen, ob das Spiel gesperrt (disabled) ist
+    // Da wir das Klick-Event direkt nutzen, holen wir das aktuelle Element via window.event
+    const eventTarget = window.event ? window.event.currentTarget : null;
+    if (eventTarget && eventTarget.classList.contains('disabled')) {
+        alert("Bitte wähle zuerst oben eine passende Kategorie aus!");
+        return;
+    }
 
-            // Hier wird später eure Spiele-Engine gestartet
-            alert(`Spiel gestartet!\nModus: ${spielName}\nVokabelset: ${aktuelleKategorie}`);
-            
-            /* Tipp für später:
-               Hier leitet ihr dann auf die Spieleseite weiter, z.B.:
-               window.location.href = `spiel.html?game=${spielName}&category=${aktuelleKategorie}`;
-            */
-        }
+    // Pfad und Dateiname für das Spiel festlegen
+    let dateiName = "";
+
+    if (spielName === "Quiz gegen die Zeit") {
+        dateiName = "spiele/quiz-zeit.html";
+    } else if (spielName === "Snake II") {
+        dateiName = "spiele/snake2.html";
+    } 
+    /* Hier kannst du später weitere Spiele hinzufügen, z.B.:
+    else if (spielName === "Pizza belegen") {
+        dateiName = "spiele/pizza-belegen.html";
+    } 
+    */
+    else {
+        alert(`Das Spiel "${spielName}" wird aktuell noch entwickelt!`);
+        return;
+    }
+
+    // Weiterleitung: Wir hängen die gewählte Kategorie als URL-Parameter an (?kategorie=...)
+    // encodeURIComponent sorgt dafür, dass Leer- und Sonderzeichen (wie &) sauber übertragen werden
+    window.location.href = `${dateiName}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
+}
+
     </script>
 </body>
 </html>
