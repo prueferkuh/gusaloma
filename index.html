@@ -2,28 +2,34 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vokabel Spiele Sammlung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ViajeVocab - Vokabeltrainer</title>
     <style>
         :root {
-            --primary: #4CAF50;
-            --primary-dark: #388E3C;
-            --secondary: #2196F3;
-            --bg-dark: #1e1e24;
-            --card-bg: #2a2a35;
-            --text: #ffffff;
-            --text-muted: #b0b0b5;
+            --bg-color: #1a1a24;
+            --panel-bg: #252532;
+            --accent-blue: #3498db;
+            --accent-gold: #f1c40f;
+            --text-color: #ffffff;
+            --text-muted: #888892;
+        }
+
+        html, body {
+            overscroll-behavior-y: contain;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            min-height: 100vh;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         header {
@@ -31,262 +37,207 @@
             margin-bottom: 30px;
         }
 
-        h1 {
-            color: var(--primary);
-            margin-bottom: 5px;
+        header h1 {
+            color: var(--accent-blue);
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
         }
 
-        h2 {
-            font-size: 1.4rem;
-            border-bottom: 2px solid #444;
-            padding-bottom: 8px;
-            width: 100%;
-            max-width: 800px;
+        header p {
+            color: var(--text-muted);
+            margin: 0;
         }
 
         .container {
             width: 100%;
-            max-width: 800px;
-            margin-bottom: 40px;
+            max-width: 600px;
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid #333;
+            box-sizing: border-box;
+            margin-bottom: 20px;
         }
 
-        /* Grid für Kategorien und Spiele */
-        .grid {
+        h2 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--accent-gold);
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+        }
+
+        /* Kategorie-Buttons */
+        .category-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
         }
 
-        /* Buttons / Karten */
-        .btn {
-            background-color: var(--card-bg);
+        .category-btn {
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-color);
             border: 2px solid #444;
-            border-radius: 12px;
-            padding: 20px 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            padding: 14px;
+            border-radius: 10px;
             font-size: 1rem;
-            color: var(--text);
             font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 8px;
         }
 
-        .btn:hover:not(.disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        .category-btn:hover {
+            border-color: var(--accent-blue);
+            background: rgba(52, 152, 219, 0.1);
         }
 
-        /* Kategorie Aktiv-Status */
         .category-btn.active {
-            border-color: var(--primary);
-            background-color: rgba(76, 175, 80, 0.15);
-            color: var(--primary);
+            border-color: var(--accent-blue);
+            background: var(--accent-blue);
+            color: white;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
         }
 
-        /* Spiele Sektion Deaktiviert-Status */
-        .disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            filter: grayscale(1);
+        /* Spiele-Buttons */
+        .game-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .game-btn {
-            border-color: #444;
-        }
-        
-        .game-btn:not(.disabled) {
-            border-color: var(--secondary);
-            background-color: rgba(33, 150, 243, 0.05);
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-color);
+            border: 2px solid #444;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         .game-btn:not(.disabled):hover {
-            background-color: var(--secondary);
-            color: #fff;
+            border-color: var(--accent-gold);
+            background: rgba(241, 196, 15, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .game-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: #333;
+            background: #1e1e26;
         }
 
         .badge {
             font-size: 0.75rem;
-            background: #555;
-            padding: 3px 8px;
-            border-radius: 10px;
-            margin-top: 8px;
-            color: var(--text-muted);
+            background: #444;
+            padding: 4px 8px;
+            border-radius: 20px;
+            color: #ddd;
+            font-weight: normal;
         }
 
         .game-btn:not(.disabled) .badge {
-            background-color: var(--secondary);
-            color: white;
-        }
-
-        #status-message {
-            background-color: #333;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            margin-bottom: 20px;
-            color: var(--text-muted);
-            font-weight: bold;
+            background: rgba(241, 196, 15, 0.2);
+            color: var(--accent-gold);
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>vocabuego 🦉</h1>
-        <p style="color: var(--text-muted);">Wähle zuerst eine Kategorie, um die Spiele freizuschalten!</p>
+        <h1>ViajeVocab ✈️</h1>
+        <p>Spanisch lernen leicht gemacht</p>
     </header>
 
-    <div id="status-message" class="container">
-        Status: Bitte wähle eine Vokabel-Kategorie aus.
-    </div>
-
     <div class="container">
-        <h2>1. Kategorie wählen</h2>
-        <div class="grid">
-            <div class="btn category-btn" onclick="selectCategory('Essen und Trinken', this)">
-                🍕 Essen & Trinken
-            </div>
-            <div class="btn category-btn" onclick="selectCategory('Fahrzeuge', this)">
-                🚗 Fahrzeuge
-            </div>
-            <div class="btn category-btn" onclick="selectCategory('Kleidung', this)">
-                👕 Kleidung
-            </div>
-            <div class="btn category-btn" onclick="selectCategory('Dating und Gefühle', this)">
-                💘 Dating & Gefühle
-            </div>
-            <div class="btn category-btn" onclick="selectCategory('Schule und Universität', this)">
-                🏫 Schule & Uni
-            </div>
+        <h2>1. Wähle ein Thema aus:</h2>
+        <div class="category-grid">
+            <button class="category-btn" onclick="waehleKategorie(this, 'Reisen')">✈️ Reisen</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'Essen und Trinken')">🍕 Essen & Trinken</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'Freizeit und Sport')">⚽ Freizeit & Sport</button>
+            <button class="category-btn" onclick="waehleKategorie(this, 'Schule und Studium')">📚 Schule & Studium</button>
         </div>
     </div>
 
     <div class="container">
-        <h2>2. Spielmodus wählen</h2>
-        
-        <p style="color: var(--text-muted); margin-top: 20px; font-weight: bold;">⭐ Spezial-Spiele (Themenbasiert)</p>
-        <div class="grid">
-            <div id="game-pizza" class="btn game-btn disabled" onclick="startGame('Pizza belegen')">
-                🍕 Pizza belegen
-                <span class="badge">Fokus: Essen</span>
-            </div>
-            <div id="game-highway" class="btn game-btn disabled" onclick="startGame('Highway to Bilingual')">
-                🛣️ Highway to Bilingual
-                <span class="badge">Fokus: Fahrzeuge</span>
-            </div>
-            <div id="game-koffer" class="btn game-btn disabled" onclick="startGame('Ich packe meinen Koffer')">
-                🧳 Koffer packen
-                <span class="badge">Fokus: Kleidung</span>
-            </div>
-            <div id="game-amor" class="btn game-btn disabled" onclick="startGame('Amors Pfeil')">
-                🏹 Amors Pfeil
-                <span class="badge">Fokus: Dating</span>
-            </div>
-        </div>
-
-        <p style="color: var(--text-muted); margin-top: 25px; font-weight: bold;">🎮 Allrounder-Spiele (Für jede Kategorie)</p>
-        <div class="grid">
-            <div class="btn game-btn generic-game disabled" onclick="startGame('Die Bibliothek')">
-                📚 Die Bibliothek
+        <h2>2. Wähle einen Spielmodus:</h2>
+        <div class="game-list">
+            
+            <button class="game-btn disabled" id="btn-quiz" onclick="startGame('Quiz gegen die Zeit')">
+                <span>⏱️ Quiz gegen die Zeit</span>
                 <span class="badge">Klassisch</span>
-            </div>
-            <div class="btn game-btn generic-game disabled" onclick="startGame('Quiz gegen die Zeit')">
-                ⏱️ Quiz gegen die Zeit
-                <span class="badge">Action</span>
-            </div>
-            <div class="btn game-btn generic-game disabled" onclick="startGame('Memory')">
-                🃏 Memory (10er Blöcke)
-                <span class="badge">Karten</span>
-            </div>
-            <a href="https://prueferkuh.github.io/gusaloma/spiele/snake2.html" target="_blank" class="btn game-btn generic-game">
-                🐍 Snake II
-                <span class="badge">Snake2 Klon</span>
-            </a>
-            <div class="btn game-btn generic-game disabled" onclick="startGame('Der Frosch')">
-                🐸 Der Frosch
-                <span class="badge">Platzhalter</span>
-            </div>
+            </button>
+
+            <button class="game-btn disabled" id="btn-snake" onclick="startGame('Snake II')">
+                <span>🐍 Snake II</span>
+                <span class="badge">Retro Action</span>
+            </button>
+            
         </div>
     </div>
 
     <script>
-        // Speicher für die aktuell ausgewählte Kategorie
-        let aktuelleKategorie = null;
+        // Diese Variable speichert global das vom Nutzer gewählte Thema ab
+        let aktuelleKategorie = ""; 
 
-        function selectCategory(kategorieName, element) {
-            // 1. Alle Kategorie-Buttons zurücksetzen
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // 2. Gewählten Button visuell hervorheben
-            element.classList.add('active');
+        /**
+         * Wird aufgerufen, wenn der Nutzer auf einen Kategorie-Button drückt
+         */
+        function waehleKategorie(element, kategorieName) {
+            // 1. Die globale Variable mit der neuen Auswahl überschreiben
             aktuelleKategorie = kategorieName;
 
-            // 3. Statusmeldung aktualisieren
-            const statusBox = document.getElementById('status-message');
-            statusBox.style.color = '#4CAF50';
-            statusBox.innerText = `Aktiviert: "${kategorieName}" – Wähle jetzt ein Spiel!`;
+            // 2. Visuelles Feedback: Markierung von alten Buttons entfernen, beim neuen hinzufügen
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
 
-            // 4. Alle Spiele-Buttons zuerst sperren (Reset)
-            document.querySelectorAll('.game-btn').forEach(btn => {
-                btn.classList.add('disabled');
-            });
-
-            // 5. Die Allrounder-Spiele freischalten (gehen immer)
-            document.querySelectorAll('.generic-game').forEach(btn => {
-                btn.classList.remove('disabled');
-            });
-
-            // 6. Themen-Spezifische Spiele passend zur Kategorie freischalten
-            if (kategorieName === 'Essen und Trinken') {
-                document.getElementById('game-pizza').classList.remove('disabled');
-            } else if (kategorieName === 'Fahrzeuge') {
-                document.getElementById('game-highway').classList.remove('disabled');
-            } else if (kategorieName === 'Kleidung') {
-                document.getElementById('game-koffer').classList.remove('disabled');
-            } else if (kategorieName === 'Dating und Gefühle') {
-                document.getElementById('game-amor').classList.remove('disabled');
-            }
+            // 3. Die Spiele-Buttons freischalten (Klasse 'disabled' entfernen)
+            document.getElementById('btn-quiz').classList.remove('disabled');
+            document.getElementById('btn-snake').classList.remove('disabled');
         }
 
+        /**
+         * Startet das jeweilige Spiel und übergibt die gewählte Kategorie per URL
+         */
         function startGame(spielName) {
-    // Prüfen, ob das Spiel gesperrt (disabled) ist
-    // Da wir das Klick-Event direkt nutzen, holen wir das aktuelle Element via window.event
-    const eventTarget = window.event ? window.event.currentTarget : null;
-    if (eventTarget && eventTarget.classList.contains('disabled')) {
-        alert("Bitte wähle zuerst oben eine passende Kategorie aus!");
-        return;
-    }
+            // Sicherheitsprüfung: Falls die Buttons geklickt werden, obwohl sie noch gesperrt sind
+            if (!aktuelleKategorie) {
+                alert("Bitte wähle zuerst weiter oben ein Thema aus!");
+                return;
+            }
 
-    // Pfad und Dateiname für das Spiel festlegen
-    let dateiName = "";
+            let dateiPfad = "";
 
-    if (spielName === "Quiz gegen die Zeit") {
-        dateiName = "spiele/quiz-zeit.html";
-    } else if (spielName === "Snake II") {
-        dateiName = "spiele/snake2.html";
-    } 
-    /* Hier kannst du später weitere Spiele hinzufügen, z.B.:
-    else if (spielName === "Pizza belegen") {
-        dateiName = "spiele/pizza-belegen.html";
-    } 
-    */
-    else {
-        alert(`Das Spiel "${spielName}" wird aktuell noch entwickelt!`);
-        return;
-    }
+            // Pfade zu den HTML-Dateien im Ordner "spiele/" festlegen
+            if (spielName === "Quiz gegen die Zeit") {
+                dateiPfad = "spiele/quiz-zeit.html";
+            } else if (spielName === "Snake II") {
+                dateiPfad = "spiele/snake2.html";
+            } else {
+                alert(`Das Spiel "${spielName}" befindet sich noch in der Entwicklung!`);
+                return;
+            }
 
-    // Weiterleitung: Wir hängen die gewählte Kategorie als URL-Parameter an (?kategorie=...)
-    // encodeURIComponent sorgt dafür, dass Leer- und Sonderzeichen (wie &) sauber übertragen werden
-    window.location.href = `${dateiName}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
-}
-
+            // Weiterleitung: Die gewählte Kategorie wird als URL-Parameter angehängt (?kategorie=...)
+            // encodeURIComponent sorgt dafür, dass Leerzeichen oder Sonderzeichen im Link nicht kaputtgehen
+            window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
+        }
     </script>
+
 </body>
 </html>
