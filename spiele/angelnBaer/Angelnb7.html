@@ -28,6 +28,17 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10;
         }
 
+        #topics-bar {
+            display: flex; gap: 8px; padding: 8px; justify-content: center; flex-wrap: nowrap; overflow-x: auto;
+            margin-bottom: 6px;
+        }
+
+        .topic-chip {
+            background: #f7f9fb; border: 1px solid #e1e6eb; padding: 6px 10px; border-radius: 999px; cursor: pointer;
+            font-size: 13px; color: #2c3e50; white-space: nowrap;
+        }
+        .topic-chip.active { background: #34495e; color: white; border-color: #34495e; }
+
         #back-btn {
             position: absolute; top: 12px; left: 12px;
             padding: 8px 12px; background: #34495e; color: white;
@@ -89,6 +100,7 @@
 <div id="game-container">
     <button id="back-btn" onclick="goHome()">⬅ Zurück</button>
     <div id="ui-top">
+        <div id="topics-bar" aria-label="Themen"></div>
         <div id="topic-title" style="font-size: 12px; color: #7f8c8d; text-transform: uppercase;"></div>
         <h2 id="german-word" style="margin: 5px 0;">Wort</h2>
         <div id="score">Punkte: 0</div>
@@ -116,39 +128,84 @@
     const ocean = document.getElementById('ocean');
     const scoreDisplay = document.getElementById('score');
     const bearImg = document.getElementById('bear-img');
+    const topicsBar = document.getElementById('topics-bar');
 
-    // Lädt die vokabeln.json vom Root-Verzeichnis. Pfad von diesem HTML aus: ../../vokabeln.json
-    fetch('../../vokabeln.json')
-        .then(res => {
-            if(!res.ok) throw new Error('Fehler beim Laden der vokabeln.json: ' + res.status);
-            return res.json();
-        })
-        .then(data => {
-            allVocabs = data;
-            const topics = Object.keys(allVocabs);
-            if(topics.length === 0) {
-                console.error('Keine Themen in vokabeln.json gefunden.');
-                return;
+    // Versuche mehrere Pfade, damit das Laden in unterschiedlichen Hosting-Setups funktioniert
+    async function loadVocab() {
+        const candidates = [
+            // relativ von spiele/angelnBaer -> repo root
+            '../../vokabeln.json',
+            // Server-root
+            '/vokabeln.json',
+            // relativ zum aktuellen Verzeichnis
+            './vokabeln.json',
+        ];
+
+        for(const path of candidates) {
+            try {
+                const res = await fetch(path, {cache: 'no-store'});
+                if(!res.ok) continue;
+                const data = await res.json();
+                return {data, path};
+            } catch(e) {
+                // ignoriere und probiere nächsten
             }
-            // Wähle das erste Thema automatisch (kann angepasst werden)
-            currentTopic = topics[0];
-            document.getElementById('topic-title').innerText = currentTopic;
-            score = 0;
-            scoreDisplay.innerText = "Punkte: 0";
+        }
+        throw new Error('vokabeln.json konnte nicht gefunden werden (pfade geprüft: ' + candidates.join(', ') + ')');
+    }
+
+    loadVocab().then(({data, path}) => {
+        allVocabs = data;
+        const topics = Object.keys(allVocabs).filter(k => Array.isArray(allVocabs[k]) && allVocabs[k].length > 0);
+        if(topics.length === 0) {
+            console.error('Keine Themen in vokabeln.json gefunden.');
+            document.getElementById('topic-title').innerText = 'Keine Vokabeln';
+            document.getElementById('german-word').innerText = '---';
             gameContainer.style.display = 'block';
-            nextRound();
-        })
-        .catch(err => {
-            console.error(err);
-            // Falls Laden fehlschlägt, zeige Spiel trotzdem mit leerer Vokabelliste
-            document.getElementById('topic-title').innerText = 'Fehler';
-            document.getElementById('german-word').innerText = 'Keine Vokabeln geladen';
-            gameContainer.style.display = 'block';
+            return;
+        }
+
+        // Erstelle Topics-Toolbar
+        topicsBar.innerHTML = '';
+        topics.forEach((t, idx) => {
+            const chip = document.createElement('button');
+            chip.className = 'topic-chip' + (idx===0? ' active':'');
+            chip.innerText = t;
+            chip.onclick = () => {
+                // setze aktiv
+                Array.from(topicsBar.children).forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                currentTopic = t;
+                document.getElementById('topic-title').innerText = t;
+                score = 0;
+                scoreDisplay.innerText = 'Punkte: 0';
+                nextRound();
+            };
+            topicsBar.appendChild(chip);
         });
+
+        // setze erstes topic
+        currentTopic = topics[0];
+        document.getElementById('topic-title').innerText = currentTopic;
+        score = 0;
+        scoreDisplay.innerText = 'Punkte: 0';
+        gameContainer.style.display = 'block';
+        nextRound();
+
+        console.log('vokabeln.json geladen von:', path);
+    }).catch(err => {
+        console.error(err);
+        document.getElementById('topic-title').innerText = 'Fehler';
+        document.getElementById('german-word').innerText = 'Vokabeln konnten nicht geladen werden';
+        gameContainer.style.display = 'block';
+    });
 
     function goHome() {
         // Zurück zur index.html im Root-Verzeichnis
-        window.location.href = '../../index.html';
+        // versuche relativ und absolut
+        const candidates = ['../../index.html', '/index.html'];
+        // erstes benutzen
+        window.location.href = candidates[0];
     }
 
     function nextRound() {
@@ -161,11 +218,19 @@
         const correct = list[Math.floor(Math.random() * list.length)];
         document.getElementById('german-word').innerText = correct.de || '---';
 
-        let options = [correct.es];
-        while(options.length < 3) {
-            let rand = list[Math.floor(Math.random() * list.length)].es;
-            if(!options.includes(rand)) options.push(rand);
+        // sichere Auswahl eindeutiger Optionen
+        const optionsSet = new Set([correct.es]);
+        const options = [correct.es];
+        const maxAttempts = 50;
+        let attempts = 0;
+        while(options.length < 3 && attempts < maxAttempts) {
+            attempts++;
+            const cand = list[Math.floor(Math.random() * list.length)].es;
+            if(!optionsSet.has(cand)) { optionsSet.add(cand); options.push(cand); }
         }
+        // Falls weniger als 3 gefunden (sehr kleine Listen), fülle mit leeren Strings
+        while(options.length < 3) options.push('');
+
         options.sort(() => Math.random() - 0.5);
         options.forEach((word, i) => createFish(word, i, correct.es));
     }
@@ -198,7 +263,7 @@
         fish.className = 'fish-graphic';
         fish.src = 'lachs1.png';
         
-        const color = fishColors[index];
+        const color = fishColors[index % fishColors.length];
         if(color === "purple") fish.style.filter = "hue-rotate(240deg) saturate(1.5)";
         if(color === "red") fish.style.filter = "hue-rotate(-50deg) saturate(2)";
         if(color === "yellow") fish.style.filter = "hue-rotate(20deg) saturate(2)";
