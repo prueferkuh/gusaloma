@@ -20,30 +20,6 @@
             user-select: none;
         }
 
-        /* HOMESCREEN */
-        #home-screen {
-            position: absolute; width: 100%; height: 100%;
-            background: #f0f4f8; z-index: 100;
-            display: flex; flex-direction: column; align-items: center;
-            overflow-y: auto; padding-bottom: 30px;
-        }
-
-        .grid-container {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 12px; padding: 15px; width: 90%; max-width: 500px;
-        }
-
-        .topic-btn {
-            background: white; border: none; border-radius: 15px;
-            padding: 15px; font-size: 16px; font-weight: bold;
-            display: flex; flex-direction: column; align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: #2c3e50;
-            cursor: pointer; transition: transform 0.1s;
-        }
-
-        .topic-btn:active { transform: scale(0.95); }
-        .topic-icon { font-size: 32px; margin-bottom: 5px; }
-
         /* GAME SCREEN */
         #game-container { display: none; position: relative; width: 100vw; height: 100vh; }
 
@@ -56,6 +32,7 @@
             position: absolute; top: 12px; left: 12px;
             padding: 8px 12px; background: #34495e; color: white;
             border: none; border-radius: 8px; font-weight: bold; z-index: 20;
+            cursor: pointer;
         }
 
         #ocean {
@@ -109,13 +86,8 @@
 </head>
 <body>
 
-<div id="home-screen">
-    <h1 style="color: #2c3e50; margin-top: 20px;">Spanisch Angeln</h1>
-    <div class="grid-container" id="topics-grid"></div>
-</div>
-
 <div id="game-container">
-    <button id="back-btn" onclick="goHome()">⬅ Menü</button>
+    <button id="back-btn" onclick="goHome()">⬅ Zurück</button>
     <div id="ui-top">
         <div id="topic-title" style="font-size: 12px; color: #7f8c8d; text-transform: uppercase;"></div>
         <h2 id="german-word" style="margin: 5px 0;">Wort</h2>
@@ -130,126 +102,64 @@
 </div>
 
 <script>
-    const allVocabs = {
-        "Natur": [
-            {de:"der Baum", es:"el árbol"}, {de:"die Blume", es:"la flor"}, {de:"der Berg", es:"la montaña"}, {de:"der Fluss", es:"el río"}, {de:"die Sonne", es:"el sol"},
-            {de:"der Mond", es:"la luna"}, {de:"das Meer", es:"el mar"}, {de:"der Wald", es:"el bosque"}, {de:"die Insel", es:"la isla"}, {de:"der Strand", es:"la playa"},
-            {de:"der Regen", es:"la lluvia"}, {de:"der Wind", es:"el viento"}, {de: "die Wolke", es:"la nube"}, {de:"das Tier", es:"el animal"}, {de:"der Vogel", es:"el pájaro"},
-            {de:"der Fisch", es:"el pez"}, {de:"die Erde", es:"la tierra"}, {de:"das Feuer", es:"el fuego"}, {de:"der Stein", es:"la piedra"}, {de:"grün", es:"verde"},
-            {de:"hoch", es:"alto"}, {de:"kalt", es:"frío"}, {de:"heiß", es:"caliente"}, {de:"wachsen", es:"crecer"}, {de:"blühen", es:"florecer"}
-        ],
-        "Musik": [
-            {de:"die Gitarre", es:"la guitarra"}, {de:"das Klavier", es:"el piano"}, {de:"das Lied", es:"la canción"}, {de:"die Stimme", es:"la voz"}, {de:"der Sänger", es:"el cantante"},
-            {de:"das Konzert", es:"el concierto"}, {de:"der Rhythmus", es:"el ritmo"}, {de:"die Note", es:"la nota"}, {de:"singen", es:"cantar"}, {de:"spielen", es:"tocar"},
-            {de:"hören", es:"escuchar"}, {de:"tanzen", es:"bailar"}, {de:"laut", es:"fuerte"}, {de:"leise", es:"bajo"}, {de:"schnell", es:"rápido"},
-            {de:"die Trommel", es:"el tambor"}, {de:"die Flöte", es:"la flauta"}, {de:"die Bühne", es:"el escenario"}, {de:"das Radio", es:"la radio"}, {de:"komponieren", es:"componer"},
-            {de:"üben", es:"practicar"}, {de:"der Chor", es:"el coro"}, {de:"die Melodie", es:"la melodía"}, {de:"klassisch", es:"clásico"}, {de:"die Band", es:"la banda"}
-        ],
-        "Arbeit": [
-            {de:"der Beruf", es:"la profesión"}, {de:"die Arbeit", es:"el trabajo"}, {de:"das Büro", es:"la oficina"}, {de:"der Chef", es:"el jefe"}, {de:"das Gehalt", es:"el salario"},
-            {de:"der Vertrag", es:"el contrato"}, {de:"die Firma", es:"la empresa"}, {de:"die Besprechung", es:"la reunión"}, {de:"der Termin", es:"la cita"}, {de:"arbeiten", es:"trabajar"},
-            {de:"verdienen", es:"ganar"}, {de:"schreiben", es:"escribir"}, {de:"anrufen", es:"llamar"}, {de:"fleißig", es:"diligente"}, {de:"faul", es:"perezoso"},
-            {de:"der Kollege", es:"el colega"}, {de:"das Projekt", es:"el proyecto"}, {de:"der Computer", es:"el ordenador"}, {de:"das Telefon", es:"el teléfono"}, {de:"organisieren", es:"organizar"},
-            {de:"kündigen", es:"dimitir"}, {de:"der Erfolg", es:"el éxito"}, {de:"die Pause", es:"el descanso"}, {de:"pünktlich", es:"puntual"}, {de:"wichtig", es:"importante"}
-        ],
-        "Sport": [
-            {de:"der Fußball", es:"el fútbol"}, {de:"der Tennis", es:"el tenis"}, {de:"laufen", es:"correr"}, {de:"schwimmen", es:"nadar"}, {de:"der Ball", es:"el balón"},
-            {de:"das Tor", es:"el gol"}, {de:"die Mannschaft", es:"el equipo"}, {de:"der Trainer", es:"el entrenador"}, {de:"gewinnen", es:"ganar"}, {de:"verlieren", es:"perder"},
-            {de:"trainieren", es:"entrenar"}, {de:"schnell", es:"rápido"}, {de:"stark", es:"fuerte"}, {de:"gesund", es:"saludable"}, {de:"das Stadion", es:"el estadio"},
-            {de:"der Sieg", es:"la victoria"}, {de:"der Schläger", es:"la raqueta"}, {de:"springen", es:"saltar"}, {de:"werfen", es:"lanzar"}, {de:"kämpfen", es:"luchar"},
-            {de:"aktiv", es:"activo"}, {de:"das Resultat", es:"el resultado"}, {de:"die Medaille", es:"la medalla"}, {de:"fair", es:"justo"}, {de:"das Trikot", es:"la camiseta"}
-        ],
-        "Kunst": [
-            {de:"das Bild", es:"el cuadro"}, {de:"malen", es:"pintar"}, {de:"der Künstler", es:"el artista"}, {de:"die Farbe", es:"el color"}, {de:"der Pinsel", es:"el pincel"},
-            {de:"das Museum", es:"el museo"}, {de:"zeichnen", es:"dibujar"}, {de:"kreativ", es:"creativo"}, {de:"schön", es:"hermoso"}, {de:"die Statue", es:"la estatua"},
-            {de:"die Galerie", es:"la galerie"}, {de:"der Maler", es:"el pintor"}, {de:"die Leinwand", es:"el lienzo"}, {de:"der Bleistift", es:"el lápiz"}, {de:"das Porträt", es:"el retrato"},
-            {de:"gestalten", es:"diseñar"}, {de:"ausstellen", es:"exhibir"}, {de:"modern", es:"moderno"}, {de:"bunt", es:"colorido"}, {de:"hell", es:"claro"},
-            {de:"dunkel", es:"oscuro"}, {de:"die Skizze", es:"el boceto"}, {de:"das Licht", es:"la luz"}, {de:"die Form", es:"la forma"}, {de:"original", es:"original"}
-        ],
-        "Hobby": [
-            {de:"das Spiel", es:"el juego"}, {de:"lesen", es:"leer"}, {de:"kochen", es:"cocinar"}, {de:"reisen", es:"viajar"}, {de:"fotografieren", es:"fotografiar"},
-            {de:"das Buch", es:"el libro"}, {de:"basteln", es:"hacer manualidades"}, {de:"sammeln", es:"coleccionar"}, {de:"wandern", es:"caminar"}, {de:"reiten", es:"montar"},
-            {de:"lustig", es:"divertido"}, {de:"spannend", es:"emocionante"}, {de:"die Freizeit", es:"el tempo libre"}, {de:"das Rätsel", es:"el enigma"}, {de:"nähen", es:"coser"},
-            {de:"zeichnen", es:"dibujar"}, {de:"gärtnern", es:"jardinear"}, {de:"puzzeln", es:"hacer puzzles"}, {de:"das Spielzeug", es:"el juguete"}, {de:"interessant", es:"interesante"},
-            {de:"langweilig", es:"aburrido"}, {de:"das Kino", es:"el cine"}, {de:"der Park", es:"el parque"}, {de:"besuchen", es:"visitar"}, {de:"lachen", es:"reír"}
-        ],
-        "Technik": [
-            {de:"der Computer", es:"el ordenador"}, {de:"das Handy", es:"el móvil"}, {de:"das Internet", es:"el internet"}, {de:"speichern", es:"guardar"}, {de:"löschen", es:"borrar"},
-            {de:"drücken", es:"pulsar"}, {de:"laden", es:"cargar"}, {de:"neu", es:"nuevo"}, {de:"schnell", es:"rápido"}, {de:"die Datei", es:"el archivo"},
-            {de:"das Passwort", es:"la contraseña"}, {de:"der Bildschirm", es:"la pantalla"}, {de:"die Maus", es:"el ratón"}, {de:"die Tastatur", es:"el teclado"}, {de:"kaputt", es:"roto"},
-            {de:"reparieren", es:"reparar"}, {de:"das Kabel", es:"el cable"}, {de:"die Batterie", es:"la batterie"}, {de:"funktioniert", es:"funciona"}, {de:"senden", es:"enviar"},
-            {de:"empfangen", es:"recibir"}, {de:"die Kamera", es:"la cámara"}, {de:"digital", es:"digital"}, {de:"automatisch", es:"automático"}, {de:"die Software", es:"el software"}
-        ],
-        "Urlaub": [
-            {de:"der Strand", es:"la playa"}, {de:"das Meer", es:"el mar"}, {de:"das Hotel", es:"el hotel"}, {de:"reisen", es:"viajar"}, {de:"buchen", es:"reservar"},
-            {de:"das Flugzeug", es:"el avión"}, {de:"der Koffer", es:"la maleta"}, {de:"der Reisepass", es:"el pasaporte"}, {de:"sonnig", es:"soleado"}, {de:"heiß", es:"caluroso"},
-            {de:"entspannen", es:"relajarse"}, {de:"die Stadt", es:"la ciudad"}, {de:"die Postkarte", es:"la tarjeta postal"}, {de:"das Foto", es:"la foto"}, {de:"der See", es:"el lago"},
-            {de:"wandern", es:"hacer senderismo"}, {de:"das Ticket", es:"el billete"}, {de:"der Ausflug", es:"la excursión"}, {de:"das Abenteuer", es:"la aventura"}, {de:"fremd", es:"extraño"},
-            {de:"bekannt", es:"conocido"}, {de:"besichtigen", es:"visitar"}, {de:"die Sonne", es:"el sol"}, {de:"der Sommer", es:"el verano"}, {de:"die Ruhe", es:"la tranquilidad"}
-        ],
-        "Bibliothek": [
-            {de:"das Buch", es:"el libro"}, {de:"lesen", es:"leer"}, {de:"die Seite", es:"la página"}, {de:"studieren", es:"estudiar"}, {de:"leihen", es:"prestar"},
-            {de:"das Regal", es:"el estante"}, {de:"leise", es:"silencioso"}, {de:"die Ruhe", es:"el silencio"}, {de:"das Wissen", es:"el conhecimento"}, {de:"die Geschichte", es:"la historia"},
-            {de:"das Wörterbuch", es:"el diccionario"}, {de:"schreiben", es:"escribir"}, {de:"lernen", es:"aprender"}, {de:"die Prüfung", es:"el examen"}, {de:"die Notiz", es:"la nota"},
-            {de:"das Papier", es:"el papel"}, {de:"der Stift", es:"el bolígrafo"}, {de:"suchen", es:"buscar"}, {de:"finden", es:"encontrar"}, {de:"die Information", es:"la información"},
-            {de:"der Autor", es:"el autor"}, {de:"der Titel", es:"el título"}, {de:"klug", es:"inteligente"}, {de:"dick", es:"gordo"}, {de:"interessant", es:"interesante"}
-        ],
-        "Film": [
-            {de:"der Film", es:"la película"}, {de:"das Kino", es:"el cine"}, {de:"sehen", es:"ver"}, {de:"der Schauspieler", es:"el actor"}, {de:"die Kamera", es:"la cámara"},
-            {de:"spannend", es:"emocionante"}, {de:"die Leinwand", es:"la pantalla"}, {de:"die Regel", es:"la dirección"}, {de:"das Popcorn", es:"las palomitas"}, {de:"lachen", es:"reír"},
-            {de:"weinen", es:"llorar"}, {de:"die Rolle", es:"el papel"}, {de:"berühmt", es:"famoso"}, {de:"das Ende", es:"el final"}, {de:"der Anfang", es:"el princípio"},
-            {de:"die Musik", es:"la música"}, {de:"das Kostüm", es:"el disfraz"}, {de:"der Horrorfilm", es:"la película de terror"}, {de:"die Komödie", es:"la comedia"}, {de:"das Drama", es:"el drama"},
-            {de:"der Star", es:"la estrella"}, {de:"die Kritik", es:"la crítica"}, {de:"die Serie", es:"la serie"}, {de:"unterhaltsam", es:"entretenido"}, {de:"der Erfolg", es:"el éxito"}
-        ]
-    };
+    // allVocabs wird aus der vokabeln.json im Repository-Root geladen
+    let allVocabs = {};
 
-    const config = [
-        {name:"Natur", icon:"🌲"}, {name:"Musik", icon:"🎸"}, {name:"Arbeit", icon:"💼"}, {name:"Sport", icon:"⚽"}, {name:"Kunst", icon:"🎨"},
-        {name:"Hobby", icon:"🕹️"}, {name:"Technik", icon:"💻"}, {name:"Urlaub", icon:"🏖️"}, {name:"Bibliothek", icon:"📚"}, {name:"Film", icon:"🎬"}
-    ];
+    // Standard-Farbpalette für Fische
+    const fishColors = ["yellow", "red", "purple"];
 
     let currentTopic = "";
     let score = 0;
-    const fishColors = ["yellow", "red", "purple"];
 
     // UI Elemente
-    const homeScreen = document.getElementById('home-screen');
     const gameContainer = document.getElementById('game-container');
-    const topicsGrid = document.getElementById('topics-grid');
     const ocean = document.getElementById('ocean');
     const scoreDisplay = document.getElementById('score');
     const bearImg = document.getElementById('bear-img');
 
-    // Menü erstellen
-    config.forEach(item => {
-        const btn = document.createElement('button');
-        btn.className = 'topic-btn';
-        btn.innerHTML = `<span class="topic-icon">${item.icon}</span>${item.name}`;
-        btn.onclick = () => {
-            currentTopic = item.name;
+    // Lädt die vokabeln.json vom Root-Verzeichnis. Pfad von diesem HTML aus: ../../vokabeln.json
+    fetch('../../vokabeln.json')
+        .then(res => {
+            if(!res.ok) throw new Error('Fehler beim Laden der vokabeln.json: ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            allVocabs = data;
+            const topics = Object.keys(allVocabs);
+            if(topics.length === 0) {
+                console.error('Keine Themen in vokabeln.json gefunden.');
+                return;
+            }
+            // Wähle das erste Thema automatisch (kann angepasst werden)
+            currentTopic = topics[0];
+            document.getElementById('topic-title').innerText = currentTopic;
             score = 0;
             scoreDisplay.innerText = "Punkte: 0";
-            document.getElementById('topic-title').innerText = item.name;
-            homeScreen.style.display = 'none';
             gameContainer.style.display = 'block';
             nextRound();
-        };
-        topicsGrid.appendChild(btn);
-    });
+        })
+        .catch(err => {
+            console.error(err);
+            // Falls Laden fehlschlägt, zeige Spiel trotzdem mit leerer Vokabelliste
+            document.getElementById('topic-title').innerText = 'Fehler';
+            document.getElementById('german-word').innerText = 'Keine Vokabeln geladen';
+            gameContainer.style.display = 'block';
+        });
 
     function goHome() {
-        homeScreen.style.display = 'flex';
-        gameContainer.style.display = 'none';
-        ocean.innerHTML = '';
-        bearImg.src = "baer1.png";
-        bearImg.style.transform = "scale(1)";
+        // Zurück zur index.html im Root-Verzeichnis
+        window.location.href = '../../index.html';
     }
 
     function nextRound() {
         ocean.innerHTML = '';
         const list = allVocabs[currentTopic];
+        if(!list || list.length === 0) {
+            document.getElementById('german-word').innerText = 'Keine Vokabeln für dieses Thema';
+            return;
+        }
         const correct = list[Math.floor(Math.random() * list.length)];
-        document.getElementById('german-word').innerText = correct.de;
+        document.getElementById('german-word').innerText = correct.de || '---';
 
         let options = [correct.es];
         while(options.length < 3) {
