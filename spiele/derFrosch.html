@@ -38,9 +38,25 @@
             align-items: center;
         }
 
+        /* --- Zurück Button --- */
+        #back-btn {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 8px 12px;
+            background: #1b5e20;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 60;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
         /* --- Header: Wort-Box --- */
         #word-box {
-            margin-top: 20px;
+            margin-top: 60px; /* Leicht erhöht wegen dem Zurück-Button */
             background: rgba(255, 255, 255, 0.95);
             padding: 12px 30px;
             border-radius: 15px;
@@ -178,7 +194,7 @@
             box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
         }
 
-        /* --- Seerosen-Bereich (mit Perfekten Blättern) --- */
+        /* --- Seerosen-Bereich --- */
         #fly-zone {
             position: absolute;
             bottom: 0;
@@ -212,7 +228,6 @@
             background: radial-gradient(circle at 40% 40%, var(--leaf-green-light), var(--leaf-green-dark));
             z-index: 1;
             box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-            /* Hier ist dein perfekter Cut-Pfad wieder drin */
             clip-path: path('M110,50 C110,80 90,100 60,100 C30,100 10,80 10,50 C10,20 30,0 60,0 C80,0 95,10 102,25 L60,50 Z');
             -webkit-clip-path: path('M110,50 C110,80 90,100 60,100 C30,100 10,80 10,50 C10,20 30,0 60,0 C80,0 95,10 102,25 L60,50 Z');
         }
@@ -269,7 +284,8 @@
 <body>
 
 <div id="game-container">
-    <div id="word-box">Cargando...</div>
+    <button id="back-btn" onclick="goHome()">⬅ Zurück</button>
+    <div id="word-box">Lade...</div>
     
     <div id="frog-scene">
         <div class="leg left"><div class="foot"></div></div>
@@ -282,43 +298,58 @@
         <div id="tongue"></div>
     </div>
 
-    <div id="score-info">Gelernt: 0 / 50</div>
+    <div id="score-info">Gelernt: 0 / 0</div>
     <div id="fly-zone"></div>
 
     <div id="overlay">
         <h1>🏆 ¡Increíble!</h1>
-        <p>Du hast 50 Vokabeln gemeistert.</p>
+        <p id="win-text">Du hast alle Vokabeln gemeistert.</p>
         <button onclick="initGame()">Nochmal spielen</button>
     </div>
 </div>
 
 <script>
-    const dictionary = [
-        {de: "der Baum", es: "el árbol"}, {de: "die Blume", es: "la flor"}, {de: "der Fluss", es: "el río"},
-        {de: "der Berg", es: "la montaña"}, {de: "die Sonne", es: "el sol"}, {de: "der Mond", es: "la luna"},
-        {de: "das Meer", es: "el mar"}, {de: "der Wald", es: "el bosque"}, {de: "der Regen", es: "la lluvia"},
-        {de: "der Wind", es: "el viento"}, {de: "die Wolke", es: "la nube"}, {de: "der Stern", es: "la estrella"},
-        {de: "der See", es: "el lago"}, {de: "die Insel", es: "la isla"}, {de: "das Feuer", es: "el fuego"},
-        {de: "die Erde", es: "la tierra"}, {de: "der Stein", es: "la piedra"}, {de: "das Blatt", es: "la hoja"},
-        {de: "der Himmel", es: "el cielo"}, {de: "das Wetter", es: "el tiempo"}, {de: "wachsen", es: "crecer"},
-        {de: "blühen", es: "florecer"}, {de: "fließen", es: "fluir"}, {de: "scheinen", es: "brillar"},
-        {de: "regnen", es: "llover"}, {de: "wehen", es: "soplar"}, {de: "klettern", es: "escalar"},
-        {de: "schwimmen", es: "nadar"}, {de: "schützen", es: "proteger"}, {de: "entdecken", es: "descubrir"},
-        {de: "grün", es: "verde"}, {de: "hoch", es: "alto"}, {de: "tief", es: "profundo"},
-        {de: "kalt", es: "frío"}, {de: "heiß", es: "caliente"}, {de: "schön", es: "hermoso"},
-        {de: "wild", es: "salvaje"}, {de: "natürlich", es: "natural"}, {de: "trocken", es: "seco"},
-        {de: "nass", es: "mojado"}, {de: "der Sand", es: "la arena"}, {de: "der Strand", es: "la playa"},
-        {de: "das Tal", es: "el valle"}, {de: "der Vulkan", es: "el volcán"}, {de: "die Höhle", es: "la cueva"},
-        {de: "der Blitz", es: "el rayo"}, {de: "der Donner", es: "el trueno"}, {de: "die Wüste", es: "el desierto"},
-        {de: "der Dschungel", es: "la selva"}, {de: "die Wurzel", es: "la raíz"}
-    ];
-
+    let currentLvlVokabeln = [];
     let gameList = [];
     let currentIdx = 0;
     let isWaiting = false;
+    let kategorieName = "Essen und Trinken"; // Fallback-Standard
+
+    // 1. Kategorie aus den URL-Parametern auslesen
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('kategorie')) {
+        kategorieName = urlParams.get('kategorie');
+    }
+
+    // 2. Vokabeln dynamisch laden
+    fetch('../vokabeln.json')
+        .then(res => {
+            if(!res.ok) throw new Error('Fehler beim Laden der vokabeln.json: ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            const katData = data.find(k => k.kategorie === kategorieName);
+            
+            if (katData && katData.vokabeln.length >= 3) {
+                currentLvlVokabeln = katData.vokabeln;
+                initGame();
+            } else {
+                throw new Error('Kategorie nicht gefunden oder zu wenige Vokabeln vorhanden.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('word-box').innerText = 'Fehler';
+            document.getElementById('score-info').innerText = 'Vokabeln konnten nicht geladen werden.';
+        });
+
+    function goHome() {
+        window.location.href = '../index.html';
+    }
 
     function initGame() {
-        gameList = [...dictionary].sort(() => Math.random() - 0.5);
+        // Mische die geladenen Vokabeln der Kategorie und limitiere auf max 50
+        gameList = [...currentLvlVokabeln].sort(() => Math.random() - 0.5).slice(0, 50);
         currentIdx = 0;
         document.getElementById('overlay').style.display = 'none';
         nextRound();
@@ -326,20 +357,21 @@
 
     function nextRound() {
         if (currentIdx >= gameList.length) {
+            document.getElementById('win-text').innerText = `Du hast alle ${gameList.length} Vokabeln gemeistert.`;
             document.getElementById('overlay').style.display = 'flex';
             return;
         }
 
         const word = gameList[currentIdx];
         document.getElementById('word-box').innerText = word.de;
-        document.getElementById('score-info').innerText = `Gelernt: ${currentIdx} / 50`;
+        document.getElementById('score-info').innerText = `Gelernt: ${currentIdx} / ${gameList.length}`;
 
         const zone = document.getElementById('fly-zone');
         zone.innerHTML = '';
 
         let choices = [word.es];
         while(choices.length < 3) {
-            let r = dictionary[Math.floor(Math.random() * dictionary.length)].es;
+            let r = currentLvlVokabeln[Math.floor(Math.random() * currentLvlVokabeln.length)].es;
             if(!choices.includes(r)) choices.push(r);
         }
         choices.sort(() => Math.random() - 0.5);
@@ -380,7 +412,6 @@
         const flyRect = flyIcon.getBoundingClientRect();
         const frogScene = document.getElementById('frog-scene').getBoundingClientRect();
 
-        // Startpunkt (Mundspalte)
         const startX = frogScene.left + (frogScene.width / 2);
         const startY = frogScene.top + 76;
 
@@ -405,8 +436,6 @@
             }, 300);
         }, 150);
     }
-
-    initGame();
 </script>
 
 </body>
