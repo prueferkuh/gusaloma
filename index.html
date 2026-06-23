@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gusaloma - Vokabeltrainer</title>
     <style>
+        /* Standard Dark-Mode Variablen */
         :root {
             --bg-color: #1a1a24;
             --panel-bg: #252532;
@@ -12,6 +13,24 @@
             --accent-gold: #f1c40f;
             --text-color: #ffffff;
             --text-muted: #888892;
+            --btn-bg: rgba(0, 0, 0, 0.2);
+            --btn-border: #444;
+            --container-border: #333;
+            --shadow: rgba(0,0,0,0.5);
+        }
+
+        /* Light-Mode Variablen */
+        :root.light-mode {
+            --bg-color: #f4f6f9;
+            --panel-bg: #ffffff;
+            --accent-blue: #2980b9;
+            --accent-gold: #d4ac0d;
+            --text-color: #2c3e50;
+            --text-muted: #7f8c8d;
+            --btn-bg: #f8f9fa;
+            --btn-border: #dcdde1;
+            --container-border: #e1e8ed;
+            --shadow: rgba(0,0,0,0.1);
         }
 
         html, body {
@@ -22,6 +41,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: var(--text-color);
             min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         body {
@@ -35,6 +55,17 @@
         header {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* Styling für das neue Logo */
+        .app-logo {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 15px;
+            display: inline-block;
         }
 
         header h1 {
@@ -48,16 +79,74 @@
             margin: 0;
         }
 
+        /* --- STYLING FÜR DEN SLIDE-REGLER --- */
+        .theme-switch-container {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-switch-label {
+            font-size: 1.2rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #444;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-blue);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        /* --- CONTAINER & BUTTONS --- */
         .container {
             width: 100%;
             max-width: 600px;
             background: var(--panel-bg);
             padding: 25px;
             border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 2px solid #333;
+            box-shadow: 0 10px 30px var(--shadow);
+            border: 2px solid var(--container-border);
             box-sizing: border-box;
             margin-bottom: 20px;
+            transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         h2 {
@@ -65,11 +154,10 @@
             margin-top: 0;
             margin-bottom: 15px;
             color: var(--accent-gold);
-            border-bottom: 1px solid #444;
+            border-bottom: 1px solid var(--container-border);
             padding-bottom: 8px;
         }
 
-        /* Kategorie-Buttons */
         .category-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -78,9 +166,9 @@
         }
 
         .category-btn {
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--btn-bg);
             color: var(--text-color);
-            border: 2px solid #444;
+            border: 2px solid var(--btn-border);
             padding: 14px;
             border-radius: 10px;
             font-size: 1rem;
@@ -105,7 +193,6 @@
             box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
         }
 
-        /* Spiele-Liste */
         .game-list {
             display: flex;
             flex-direction: column;
@@ -113,9 +200,9 @@
         }
 
         .game-btn {
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--btn-bg);
             color: var(--text-color);
-            border: 2px solid #444;
+            border: 2px solid var(--btn-border);
             padding: 18px;
             border-radius: 12px;
             font-size: 1.1rem;
@@ -138,16 +225,16 @@
         .game-btn.disabled {
             opacity: 0.3;
             cursor: not-allowed;
-            border-color: #333;
-            background: #1e1e26;
+            border-color: var(--container-border);
+            background: var(--btn-bg);
         }
 
         .badge {
             font-size: 0.75rem;
-            background: #444;
+            background: var(--btn-border);
             padding: 4px 8px;
             border-radius: 20px;
-            color: #ddd;
+            color: var(--text-muted);
             font-weight: normal;
         }
 
@@ -160,6 +247,14 @@
 <body>
 
     <header>
+        <div class="theme-switch-container">
+            <span class="theme-switch-label" id="theme-icon">🌙</span>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <img src="invertLogo.png" id="main-logo" class="app-logo" alt="Gusaloma Logo">
         <h1>GusalomaVocab ♤♡◇♧</h1>
         <p>Spanisch lernen spielerisch leicht</p>
     </header>
@@ -167,8 +262,7 @@
     <div class="container">
         <h2>1. Wähle eine Vokabelkategorie:</h2>
         <div class="category-grid" id="categoryGrid">
-            <!-- Wird dynamisch geladen -->
-        </div>
+            </div>
     </div>
 
     <div class="container">
@@ -224,9 +318,47 @@
     </div>
 
     <script>
-        // Speichert das aktuell gewählte Thema ab
         let aktuelleKategorie = ""; 
         let kategorien = [];
+
+        // Theme-Zustand beim Laden initialisieren
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            const toggleInput = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-icon');
+            const logo = document.getElementById('main-logo');
+
+            if (savedTheme === 'light') {
+                document.documentElement.classList.add('light-mode');
+                toggleInput.checked = true;
+                icon.textContent = '☀️';
+                logo.src = 'Logo.png'; // NEU: Lädt helles Logo
+            } else {
+                icon.textContent = '🌙';
+                logo.src = 'invertLogo.png'; // NEU: Lädt dunkles Logo (Invertiert)
+            }
+        });
+
+        /**
+         * Schaltet zwischen Light- und Darkmode um & wechselt das Logo
+         */
+        function toggleTheme() {
+            const toggleInput = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-icon');
+            const logo = document.getElementById('main-logo');
+
+            if (toggleInput.checked) {
+                document.documentElement.classList.add('light-mode');
+                icon.textContent = '☀️';
+                logo.src = 'Logo.png'; // NEU: Wechselt zu Logo.png
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.remove('light-mode');
+                icon.textContent = '🌙';
+                logo.src = 'invertLogo.png'; // NEU: Wechselt zu invertLogo.png
+                localStorage.setItem('theme', 'dark');
+            }
+        }
 
         // Lade die Kategorien beim Laden der Seite
         fetch('vokabeln.json')
@@ -237,9 +369,6 @@
             })
             .catch(error => console.error('Fehler beim Laden der Kategorien:', error));
 
-        /**
-         * Rendert die Kategorie-Buttons dynamisch basierend auf JSON
-         */
         function renderKategorieButtons() {
             const categoryGrid = document.getElementById('categoryGrid');
             categoryGrid.innerHTML = '';
@@ -255,30 +384,18 @@
             });
         }
 
-        /**
-         * Wird aufgerufen, wenn auf einen Kategorie-Button geklickt wird
-         */
         function waehleKategorie(element, kategorieName) {
-            // 1. Speichere das Thema
             aktuelleKategorie = kategorieName;
 
-            // 2. Visuelles Feedback für die Buttons
             document.querySelectorAll('.category-grid .category-btn').forEach(btn => btn.classList.remove('active'));
             element.classList.add('active');
 
-            // 3. ALLE Spiele-Buttons aktivieren (Klasse 'disabled' entfernen)
             document.querySelectorAll('.game-list .game-btn').forEach(btn => {
                 btn.classList.remove('disabled');
             });
         }
 
-        /**
-         * Verarbeitet den Spielstart und leitet mit dem URL-Parameter weiter
-         * Robuste Variante: prüft zuerst, ob die Zielseite tatsächlich existiert (HEAD/GET),
-         * bevor auf sie weitergeleitet wird. So entstehen keine toten Links.
-         */
         function startGame(spielName) {
-            // Schutzfunktion: Falls die Buttons gedrückt werden, bevor ein Thema gewählt ist
             if (!aktuelleKategorie) {
                 alert("Bitte wähle zuerst oben eine passende Vokabelkategorie aus!");
                 return;
@@ -286,7 +403,6 @@
 
             let dateiPfad = "";
 
-            // Pfade zu deinen tatsächlichen Spieldateien im Unterordner "spiele/"
             if (spielName === "Quiz gegen die Zeit") {
                 dateiPfad = "spiele/quiz-zeit.html";
             } else if (spielName === "Snake II") {
@@ -298,18 +414,15 @@
             } else if (spielName === "Angelbär") {
                 dateiPfad = "spiele/angelnBaer/Angelnb7.html";
             } else {
-                // Das fängt alle Platzhalter-Spiele ab, die du noch hochladen möchtest
                 alert(`Das Spiel "${spielName}" wird aktuell noch von uns entwickelt und steht bald bereit!`);
                 return;
             }
 
-            // Wenn kein Pfad bestimmt wurde (extra Vorsicht), abbrechen
             if (!dateiPfad) {
                 alert(`Kein Pfad für das Spiel "${spielName}" gefunden.`);
                 return;
             }
 
-            // Prüfen, ob die Datei existiert (HEAD bevorzugt, Fallback auf GET)
             fetch(dateiPfad, { method: 'HEAD' })
                 .then(response => {
                     if (response.ok) {
@@ -319,7 +432,6 @@
                     }
                 })
                 .catch(() => {
-                    // Manche Server blocken HEAD; versuche GET als Fallback
                     fetch(dateiPfad)
                         .then(r => {
                             if (r.ok) window.location.href = `${dateiPfad}?kategorie=${encodeURIComponent(aktuelleKategorie)}`;
