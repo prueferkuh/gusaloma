@@ -1,332 +1,150 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ich packe meinen Koffer - Vokabel Edition</title>
-    <style>
-        :root {
-            --bg-color: #1a1a24;
-            --panel-bg: #252532;
-            --accent-blue: #3498db;
-            --accent-gold: #f1c40f;
-            --text-color: #ffffff;
-            --text-muted: #888892;
-            --container-border: #333;
-            --shadow: rgba(0,0,0,0.5);
-        }
+// Theme direkt aus dem LocalStorage matchen
+if (localStorage.getItem('theme') === 'light') {
+    document.documentElement.classList.add('light-mode');
+}
 
-        /* Automatischer Abgleich mit dem im Hauptmenü gewählten Theme */
-        :root.light-mode {
-            --bg-color: #f4f6f9;
-            --panel-bg: #ffffff;
-            --accent-blue: #2980b9;
-            --accent-gold: #d4ac0d;
-            --text-color: #2c3e50;
-            --text-muted: #7f8c8d;
-            --container-border: #e1e8ed;
-            --shadow: rgba(0,0,0,0.1);
-        }
+let alleVokabeln = [];
+let kofferReihenfolge = []; // Speichert die korrekte Abfolge der Vokabel-Objekte
+let aktuellerPruefSchritt = 0; // Wo befindet sich der Spieler beim Nachlegen?
+let kategorieName = "Kleidung"; 
 
-        html, body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--text-color);
-            min-height: 100vh;
-        }
+// 1. Kategorie aus der URL holen
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('kategorie')) {
+    kategorieName = urlParams.get('kategorie');
+}
+document.getElementById('current-category').innerText = kategorieName;
 
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px;
-            box-sizing: border-box;
+// 2. Vokabeldaten laden
+fetch('../../vokabeln.json')
+    .then(response => response.json())
+    .then(data => {
+        const katData = data.find(k => k.kategorie === kategorieName);
+        if (katData && katData.vokabeln.length >= 4) {
+            alleVokabeln = katData.vokabeln;
+        } else {
+            document.getElementById('task-display').innerText = "Fehler!";
+            alert(`Kategorie "${kategorieName}" hat nicht genügend Vokabeln (mind. 4 benötigt).`);
         }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("vokabeln.json konnte nicht geladen werden.");
+    });
 
-        .back-link {
-            color: var(--accent-blue);
-            text-decoration: none;
-            font-weight: bold;
-            margin: 10px 0;
-            align-self: flex-start;
-        }
+function showOverlay(title, text, btnText) {
+    document.getElementById('overlay-title').innerText = title;
+    document.getElementById('overlay-text').innerText = text;
+    document.getElementById('overlay-button').innerText = btnText;
+    document.getElementById('game-overlay').style.display = 'flex';
+}
 
-        #game-container {
-            width: 100%;
-            max-width: 600px;
-            background: var(--panel-bg);
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px var(--shadow);
-            border: 2px solid var(--container-border);
-            box-sizing: border-box;
-            text-align: center;
-        }
+function closeOverlayAndStart() {
+    document.getElementById('game-overlay').style.display = 'none';
+    if (alleVokabeln.length > 0 && kofferReihenfolge.length === 0) {
+        neuesObjektHinzufuegen();
+    } else if (kofferReihenfolge.length > 0 && document.getElementById('overlay-button').innerText === "Erneut versuchen") {
+        kofferReihenfolge = [];
+        document.getElementById('kofferBox').innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Der Koffer ist noch leer...</span>';
+        neuesObjektHinzufuegen();
+    }
+}
 
-        #info-panel {
-            display: flex;
-            justify-content: space-between;
-            background: rgba(0,0,0,0.2);
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
+// Fügt ein neues zufälliges Wort der Kette hinzu
+function neuesObjektHinzufuegen() {
+    aktuellerPruefSchritt = 0;
+    document.getElementById('round-display').innerText = kofferReihenfolge.length + 1;
 
-        .koffer-box {
-            background: rgba(0, 0, 0, 0.15);
-            border: 2px dashed var(--accent-blue);
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 80px;
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 8px;
-        }
+    const randomVokabel = alleVokabeln[Math.floor(Math.random() * alleVokabeln.length)];
+    kofferReihenfolge.push(randomVokabel);
 
-        .koffer-item {
-            background: var(--accent-blue);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.95rem;
-            font-weight: bold;
-        }
-
-        #task-display {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: var(--accent-gold);
-            margin-bottom: 20px;
-        }
-
-        .options-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .option-btn {
-            background: rgba(0, 0, 0, 0.2);
-            color: var(--text-color);
-            border: 2px solid var(--container-border);
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .option-btn:hover {
-            border-color: var(--accent-gold);
-            background: rgba(241, 196, 15, 0.05);
-        }
-
-        /* Overlay für Start / Game Over */
-        .overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 10;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .overlay-box {
-            background: var(--panel-bg);
-            padding: 25px;
-            border-radius: 16px;
-            text-align: center;
-            border: 2px solid var(--accent-gold);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .overlay button {
-            background: var(--accent-gold);
-            color: #1a1a24; border: none; padding: 12px 24px;
-            font-size: 1.1rem; font-weight: bold; border-radius: 8px;
-            cursor: pointer; margin-top: 20px;
-            width: 100%;
-        }
-    </style>
-</head>
-<body>
-
-    <a href="../../index.html" class="back-link">← Menü</a>
+    // Phase 1: Dem Spieler das neue Wort zeigen
+    document.getElementById('task-display').innerText = `Merke dir das neue Wort: "${randomVokabel.de}" (= ${randomVokabel.es})`;
     
-    <div id="game-container">
-        <div id="info-panel">
-            <div>Kat: <span id="current-category" style="color:var(--accent-blue);">Lade...</span></div>
-            <div>Runde: <span id="round-display" style="font-weight:bold; color:#2ecc71;">0</span></div>
-        </div>
+    // Die Buttons kurz leeren, damit man nicht voreilig klickt
+    document.getElementById('optionsGrid').innerHTML = '';
 
-        <h3 style="margin: 0 0 10px 0;">Dein Koffer enthält:</h3>
-        <div class="koffer-box" id="kofferBox">
-            <span style="color: var(--text-muted); font-style: italic;">Der Koffer ist noch leer...</span>
-        </div>
-        
-        <div id="task-display">Lade Vokabeln...</div>
-        
-        <div class="options-grid" id="optionsGrid">
-            </div>
-    </div>
+    // Nach 2 Sekunden startet die Abfrage-Phase automatisch
+    setTimeout(() => {
+        starteAbfragePhase();
+    }, 2000);
+}
 
-    <div id="game-overlay" class="overlay">
-        <div class="overlay-box">
-            <h2 id="overlay-title">Ich packe meinen Koffer 🧳</h2>
-            <p id="overlay-text">Merke dir die Reihenfolge der spanischen Wörter und packe den Koffer immer weiter ein!</p>
-            <button id="overlay-button" onclick="closeOverlayAndStart()">Spiel starten</button>
-        </div>
-    </div>
+function starteAbfragePhase() {
+    // Phase 2: Text anpassen, je nachdem ob von vorn begonnen wird
+    if (kofferReihenfolge.length === 1) {
+        document.getElementById('task-display').innerText = `Packe das erste Wort in den Koffer!`;
+    } else {
+        document.getElementById('task-display').innerText = `Wiederhole die Kette! Was war das 1. Wort?`;
+    }
+    renderOptionButtons();
+}
 
-    <script>
-        // Theme direkt aus dem LocalStorage matchen
-        if (localStorage.getItem('theme') === 'light') {
-            document.documentElement.classList.add('light-mode');
+function renderOptionButtons() {
+    const grid = document.getElementById('optionsGrid');
+    grid.innerHTML = '';
+
+    // Bestimme das aktuell gesuchte Wort für diesen Klickschritt
+    const gesuchtesWort = kofferReihenfolge[aktuellerPruefSchritt];
+
+    // Erstelle die Antwortmöglichkeiten (1 richtige, 3 falsche)
+    let auswahl = [gesuchtesWort];
+    while (auswahl.length < Math.min(4, alleVokabeln.length)) {
+        const falschesWort = alleVokabeln[Math.floor(Math.random() * alleVokabeln.length)];
+        if (!auswahl.some(item => item.id === falschesWort.id)) {
+            auswahl.push(falschesWort);
         }
+    }
 
-        let alleVokabeln = [];
-        let kofferReihenfolge = []; // Speichert die korrekte Abfolge der Vokabel-Objekte
-        let aktuellerPruefSchritt = 0; // Wo befindet sich der Spieler beim Nachlegen?
-        let kategorieName = "Kleidung"; 
+    // Shuffle Auswahl-Array
+    auswahl.sort(() => Math.random() - 0.5);
 
-        // 1. Kategorie aus der URL holen
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('kategorie')) {
-            kategorieName = urlParams.get('kategorie');
-        }
-        document.getElementById('current-category').innerText = kategorieName;
+    auswahl.forEach(vokabel => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = vokabel.es; // Spanisch auf den Buttons
+        btn.onclick = () => verifiziereAuswahl(vokabel);
+        grid.appendChild(btn);
+    });
+}
 
-        // 2. Vokabeldaten laden
-        fetch('../../vokabeln.json')
-            .then(response => response.json())
-            .then(data => {
-                const katData = data.find(k => k.kategorie === kategorieName);
-                if (katData && katData.vokabeln.length >= 4) {
-                    alleVokabeln = katData.vokabeln;
-                } else {
-                    document.getElementById('task-display').innerText = "Fehler!";
-                    alert(`Kategorie "${kategorieName}" hat nicht genügend Vokabeln (mind. 4 benötigt).`);
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                alert("vokabeln.json konnte nicht geladen werden.");
-            });
+function verifiziereAuswahl(gewaehlteVokabel) {
+    const korrekteVokabel = kofferReihenfolge[aktuellerPruefSchritt];
 
-        function showOverlay(title, text, btnText) {
-            document.getElementById('overlay-title').innerText = title;
-            document.getElementById('overlay-text').innerText = text;
-            document.getElementById('overlay-button').innerText = btnText;
-            document.getElementById('game-overlay').style.display = 'flex';
-        }
+    if (gewaehlteVokabel.id === korrekteVokabel.id) {
+        aktuellerPruefSchritt++;
 
-        function closeOverlayAndStart() {
-            document.getElementById('game-overlay').style.display = 'none';
-            if (alleVokabeln.length > 0 && kofferReihenfolge.length === 0) {
-                neuesObjektHinzufuegen();
-            } else if (kofferReihenfolge.length > 0 && document.getElementById('overlay-button').innerText === "Erneut versuchen") {
-                // Reset bei Game Over
-                kofferReihenfolge = [];
-                neuesObjektHinzufuegen();
-            }
-        }
-
-        // Fügt ein neues zufälliges Wort der Kette hinzu
-        function neuesObjektHinzufuegen() {
-            aktuellerPruefSchritt = 0;
-            document.getElementById('round-display').innerText = kofferReihenfolge.length + 1;
-
-            const randomVokabel = alleVokabeln[Math.floor(Math.random() * alleVokabeln.length)];
-            kofferReihenfolge.push(randomVokabel);
-
-            // Zeige dem Spieler, welches Wort neu dazugekommen ist (Auf Deutsch)
-            document.getElementById('task-display').innerText = `Packe ein: "${randomVokabel.de}"`;
+        // Wenn die gesamte Kette für diese Runde fehlerfrei durchgeklickt wurde
+        if (aktuellerPruefSchritt === kofferReihenfolge.length) {
+            document.getElementById('task-display').innerText = "Richtig! Der Koffer füllt sich...";
+            document.getElementById('optionsGrid').innerHTML = '';
+            aktualisiereKofferAnzeige();
             
-            starteAbfragePhase();
-        }
-
-        function starteAbfragePhase() {
-            // Wenn der Koffer leer ist, direkt Buttons rendern
+            setTimeout(() => {
+                neuesObjektHinzufuegen();
+            }, 1200);
+        } else {
+            // Nächsten Gegenstand der Kette abfragen
+            document.getElementById('task-display').innerText = `Richtig! Was kam nach "${korrekteVokabel.es}"?`;
             renderOptionButtons();
         }
+    } else {
+        // Falsch getippt -> Game Over!
+        showOverlay(
+            "Game Over! 🧳💀", 
+            `Das war leider falsch. Richtig gewesen wäre "${korrekteVokabel.es}" (${korrekteVokabel.de}). Du hast eine Kette von ${kofferReihenfolge.length - 1} Begriffen geschafft!`, 
+            "Erneut versuchen"
+        );
+    }
+}
 
-        function renderOptionButtons() {
-            const grid = document.getElementById('optionsGrid');
-            grid.innerHTML = '';
-
-            // Bestimme das gesuchte Wort für diesen Klick-Schritt
-            // Zuerst muss der Spieler die alten Sachen wiederholen, am Ende das neue Wort
-            const gesuchtesWort = kofferReihenfolge[aktuellerPruefSchritt];
-
-            // Erstelle die Antwortmöglichkeiten (1 richtige, 3 falsche)
-            let auswahl = [gesuchtesWort];
-            while (auswahl.length < Math.min(4, alleVokabeln.length)) {
-                const falschesWort = alleVokabeln[Math.floor(Math.random() * alleVokabeln.length)];
-                if (!auswahl.some(item => item.id === falschesWort.id)) {
-                    auswahl.push(falschesWort);
-                }
-            }
-
-            // Shuffle Auswahl-Array
-            auswahl.sort(() => Math.random() - 0.5);
-
-            auswahl.forEach(vokabel => {
-                const btn = document.createElement('button');
-                btn.className = 'option-btn';
-                btn.textContent = vokabel.es; // Spanischer Begriff auf den Buttons
-                btn.onclick = () => verifiziereAuswahl(vokabel);
-                grid.appendChild(btn);
-            });
-        }
-
-        function verifiziereAuswahl(gewaehlteVokabel) {
-            const korrekteVokabel = kofferReihenfolge[aktuellerPruefSchritt];
-
-            if (gewaehlteVokabel.id === korrekteVokabel.id) {
-                // Richtig getippt!
-                aktuellerPruefSchritt++;
-
-                // Haben wir alle Gegenstände im Koffer in korrekter Reihenfolge angeklickt?
-                if (aktuellerPruefSchritt === kofferReihenfolge.length) {
-                    aktualisiereKofferAnzeige();
-                    setTimeout(() => {
-                        neuesObjektHinzufuegen();
-                    }, 800);
-                } else {
-                    // Nächsten Gegenstand der Kette abfragen
-                    const naechsterGegenstand = kofferReihenfolge[aktuellerPruefSchritt];
-                    document.getElementById('task-display').innerText = `Was kam nach "${korrekteVokabel.es}"?`;
-                    renderOptionButtons();
-                }
-            } else {
-                // Falsch getippt -> Game Over!
-                showOverlay(
-                    "Game Over! 🧳💀", 
-                    `Das war leider falsch. Richtig gewesen wäre "${korrekteVokabel.es}" (${korrekteVokabel.de}). Du hast ${kofferReihenfolge.length - 1} Gegenstände geschafft!`, 
-                    "Erneut versuchen"
-                );
-                document.getElementById('kofferBox').innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Der Koffer ist noch leer...</span>';
-            }
-        }
-
-        function aktualisiereKofferAnzeige() {
-            const box = document.getElementById('kofferBox');
-            box.innerHTML = '';
-            kofferReihenfolge.forEach(item => {
-                const span = document.createElement('span');
-                span.className = 'koffer-item';
-                span.textContent = item.es;
-                box.appendChild(span);
-            });
-        }
-    </script>
-</body>
-</html>
+function aktualisiereKofferAnzeige() {
+    const box = document.getElementById('kofferBox');
+    box.innerHTML = '';
+    kofferReihenfolge.forEach(item => {
+        const span = document.createElement('span');
+        span.className = 'koffer-item';
+        span.textContent = item.es;
+        box.appendChild(span);
+    });
+}
