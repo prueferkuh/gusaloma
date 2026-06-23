@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amor de Idiomas Pro - Custom Assets</title>
+    <style>
+        :root {
+            --heart-red: radial-gradient(circle at 30% 30%, #ff5c8a, #a01a58);
+            --bg: #0f0f1a;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            padding-top: 20px;
+        }
+        .german-word {
+            font-size: 30px;
+            font-weight: bold;
+            color: #ff85a1;
+            text-shadow: 0 0 15px rgba(255, 133, 161, 0.6);
+            margin-bottom: 20px;
+            min-height: 40px;
+        }
+
+        /* Amor Bild-Container - Höhe leicht angepasst für größere Bilder */
+        .cupid-wrapper {
+            position: relative;
+            height: 220px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* Um 30% vergrößert von 150px auf 195px */
+        .cupid-img {
+            height: 195px;
+            z-index: 2;
+        }
+        /* Um 30% vergrößert von 60px auf 78px */
+        #arrow-projectile {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 78px; 
+            height: auto;
+            opacity: 0;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        /* V-Layout für Herzen */
+        .v-grid {
+            position: relative;
+            height: 380px;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 380px;
+        }
+        .bottom-row {
+            margin-top: 30px;
+        }
+
+        .heart {
+            width: 150px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: var(--heart-red);
+            clip-path: path('M75 45 C75 0 0 0 0 52 C0 105 75 150 75 150 C75 150 150 105 150 52 C150 0 75 0 75 45');
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            animation: heartBeat 1.4s infinite ease-in-out;
+            position: relative;
+        }
+
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.1); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.15); }
+            70% { transform: scale(1); }
+        }
+
+        .heart-text {
+            color: white;
+            font-size: 15px;
+            font-weight: 900;
+            padding: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        .hidden { display: none; }
+        #score { color: #888; font-size: 14px; margin-top: 10px; }
+        button {
+            background: linear-gradient(#ffd700, #ff8c00);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            color: black;
+            font-weight: bold;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="quiz-section">
+        <div class="german-word" id="word-to-translate">Lade Liebe...</div>
+        
+        <div class="cupid-wrapper">
+            <img src="relaxed.png" id="amor-relax" class="cupid-img" alt="Amor entspannt">
+            <img src="gespannt.png" id="amor-shoot" class="cupid-img hidden" alt="Amor gespannt">
+            
+            <img src="pfeil.png" id="arrow-projectile" alt="Pfeil">
+        </div>
+
+        <div class="v-grid" id="choices-container">
+            <div class="top-row">
+                <div id="h0"></div>
+                <div id="h1"></div>
+            </div>
+            <div class="bottom-row">
+                <div id="h2"></div>
+            </div>
+        </div>
+        
+        <p id="score">💘 <span id="current">1</span> / 100</p>
+    </div>
+
+    <div id="result-section" class="hidden">
+        <h2>¡Maestro de Corazones! ❤️</h2>
+        <p>Du hast alle 100 Vokabeln gemeistert.</p>
+        <button onclick="startGame()">Nochmal von vorn</button>
+    </div>
+</div>
+
+<script>
+    const vocabulary = [
+        {de: "das Date", es: "la cita"}, {de: "die Liebe", es: "el amor"}, {de: "der Kuss", es: "el beso"},
+        {de: "die Leidenschaft", es: "la pasión"}, {de: "das Begehren", es: "el deseo"}, {de: "die Verführung", es: "la seducción"},
+        {de: "die Berührung", es: "el tacto"}, {de: "die Beziehung", es: "la relación"}, {de: "der Schatz", es: "el tesoro"},
+        {de: "die Lust", es: "la lujuria"}, {de: "das Bett", es: "la cama"}, {de: "die Zärtlichkeit", es: "la tenderness" /* Korrektur zu la ternura erfolgt zur Laufzeit */, es: "la ternura"},
+        {de: "die Sinnlichkeit", es: "la sensualidad"}, {de: "die Umarmung", es: "el abrazo"}, {de: "die Erotik", es: "el erotismo"},
+        {de: "die Flamme", es: "la llama"}, {de: "das Herz", es: "el corazón"}, {de: "die Nacht", es: "la noche"},
+        {de: "die Haut", es: "la piel"}, {de: "der Körper", es: "el cuerpo"}, {de: "der Liebhaber", es: "el amante"},
+        {de: "die Verabredung", es: "el encuentro"}, {de: "das Lächeln", es: "la sonrisa"}, {de: "der Blick", es: "la mirada"},
+        {de: "die Sehnsucht", es: "la añoranza"}, {de: "das Abenteuer", es: "la aventura"}, {de: "das Geheimnis", es: "el secreto"},
+        {de: "die Intimität", es: "la intimidad"}, {de: "das Vergnügen", es: "el placer"}, {de: "der Rausch", es: "el éxtasis"},
+        {de: "die Schönheit", es: "la belleza"}, {de: "das Gefühl", es: "el sentimiento"}, {de: "die Treue", es: "la fidelidad"},
+        {de: "die Eifersucht", es: "los celos"}, {de: "der Flirt", es: "el coqueteo"},
+        {de: "küssen", es: "besar"}, {de: "lieben", es: "amar"}, {de: "begehren", es: "desear"},
+        {de: "verführen", es: "seducir"}, {de: "flirten", es: "ligar"}, {de: "umarmen", es: "abrazar"},
+        {de: "streicheln", es: "acariciar"}, {de: "berühren", es: "tocar"}, {de: "fühlen", es: "sentir"},
+        {de: "ausziehen", es: "desnudar"}, {de: "träumen", es: "soñar"}, {de: "erregen", es: "excitar"},
+        {de: "genießen", es: "disfrutar"}, {de: "lächeln", es: "sonreír"}, {de: "anstarren", es: "mirar"},
+        {de: "flüstern", es: "susurrar"}, {de: "schlafen mit", es: "acostarse con"}, {de: "ausgehen", es: "salir"},
+        {de: "kennenlernen", es: "conocer"}, {de: "verlieben", es: "enamorarse"}, {de: "bewundern", es: "admirar"},
+        {de: "locken", es: "atraer"}, {de: "atmen", es: "respirar"}, {de: "zittern", es: "temblar"},
+        {de: "versuchen", es: "tentar"}, {de: "beißen", es: "morder"}, {de: "lecken", es: "lamer"},
+        {de: "halten", es: "sostener"}, {de: "brauchen", es: "necesitar"}, {de: "warten", es: "esperar"},
+        {de: "tanzen", es: "bailar"}, {de: "verlassen", es: "dejar"}, {de: "versprechen", es: "prometer"},
+        {de: "hübsch", es: "guapo/a"}, {de: "verliebt", es: "enamorado/a"}, {de: "heiß", es: "caliente"},
+        {de: "nackt", es: "desnudo/a"}, {de: "zärtlich", es: "tierno/a"}, {de: "romantisch", es: "romántico/a"},
+        {de: "sinnlich", es: "sensual"}, {de: "geheimnisvoll", es: "misterioso/a"}, {de: "attraktiv", es: "atractivo/a"},
+        {de: "leidenschaftlich", es: "apasionado/a"}, {de: "süß", es: "dulce"}, {de: "wild", es: "salvaje"},
+        {de: "intim", es: "íntimo/a"}, {de: "einsam", es: "solo/a"}, {de: "erregt", es: "excitado/a"},
+        {de: "wunderschön", es: "hermoso/a"}, {de: "treu", es: "fiel"}, {de: "sexy", es: "sexy"},
+        {de: "unwiderstehlich", es: "irresistible"}, {de: "elegant", es: "elegante"}, {de: "provokativ", es: "provocativo/a"},
+        {de: "feucht", es: "húmedo/a"}, {de: "eng", es: "estrecho/a"}, {de: "sanft", es: "suave"},
+        {de: "blind", es: "ciego/a"}, {de: "verboten", es: "prohibido/a"}, {de: "nah", es: "cerca"},
+        {de: "fern", es: "lejos"}, {de: "perfekt", es: "perfecto/a"}, {de: "direkt", es: "directo/a"}
+    ];
+
+    let currentList = [];
+    let currentIndex = 0;
+
+    function startGame() {
+        currentList = [...vocabulary].sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        document.getElementById('quiz-section').classList.remove('hidden');
+        document.getElementById('result-section').classList.add('hidden');
+        showNext();
+    }
+
+    function showNext() {
+        if (currentIndex >= 100) return showResults();
+        
+        const q = currentList[currentIndex];
+        document.getElementById('word-to-translate').innerText = q.de;
+        document.getElementById('current').innerText = currentIndex + 1;
+
+        let options = [q.es];
+        while(options.length < 3) {
+            let r = vocabulary[Math.floor(Math.random() * 100)].es;
+            if(!options.includes(r)) options.push(r);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        for(let i=0; i<3; i++) {
+            const container = document.getElementById(`h${i}`);
+            container.innerHTML = `<div class="heart" onclick="fire(this, '${options[i]}', '${q.es}')"><span class="heart-text">${options[i]}</span></div>`;
+        }
+    }
+
+    function fire(target, selected, correct) {
+        const arrow = document.getElementById('arrow-projectile');
+        const amorRelax = document.getElementById('amor-relax');
+        const amorShoot = document.getElementById('amor-shoot');
+        
+        const tRect = target.getBoundingClientRect();
+        const cRect = amorRelax.getBoundingClientRect();
+
+        const x = tRect.left + tRect.width/2 - (cRect.left + cRect.width/2);
+        const y = tRect.top + tRect.height/2 - (cRect.top + cRect.height/2);
+
+        // Bildwechsel zu gespannt
+        amorRelax.classList.add('hidden');
+        amorShoot.classList.remove('hidden');
+
+        arrow.style.transition = 'none';
+        arrow.style.opacity = '1';
+        arrow.style.transform = 'translate(-50%, -50%)';
+
+        setTimeout(() => {
+            arrow.style.transition = 'transform 0.4s ease-in, opacity 0.3s';
+            arrow.style.transform = `translate(${x}px, ${y}px) rotate(${Math.atan2(y, x)}rad)`;
+        }, 50);
+
+        setTimeout(() => {
+            arrow.style.opacity = '0';
+            // Zurück zu relaxed
+            amorShoot.classList.add('hidden');
+            amorRelax.classList.remove('hidden');
+
+            if(selected === correct) {
+                currentIndex++;
+                showNext();
+            } else {
+                alert("¡Mal! Versuche es erneut.");
+            }
+        }, 450);
+    }
+
+    function showResults() {
+        document.getElementById('quiz-section').classList.add('hidden');
+        document.getElementById('result-section').classList.remove('hidden');
+    }
+
+    startGame();
+</script>
+</body>
+</html>
