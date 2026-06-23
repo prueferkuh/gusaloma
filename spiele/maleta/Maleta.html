@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>¡A hacer la maleta!: ¡Vacaciones!</title>
+    <style>
+        :root {
+            --bg-color: #e0f7fa;
+            --accent-color: #f39c12;
+            --suitcase-color: #a0522d; /* Sienna Brown */
+            --suitcase-trim: #ffd700; /* Gold */
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none; /* Verhindert Textmarkierung beim Tippen */
+            -webkit-user-select: none;
+        }
+
+        /* Header Bereich */
+        #header-area {
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            box-sizing: border-box;
+            background: rgba(255,255,255,0.6);
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+
+        #instruction {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        #score-board {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        /* Haupt-Spielbereich */
+        #game-container {
+            display: flex;
+            width: 100%;
+            flex: 1; /* Füllt den Rest des Bildschirms */
+            padding: 15px;
+            box-sizing: border-box;
+            gap: 15px;
+            max-width: 800px; /* Begrenzung für Tablets */
+        }
+
+        /* --- STYLING DES KOFFERS (Links) --- */
+        .suitcase-area {
+            flex: 1.2; /* Koffer ist etwas breiter */
+            background-color: var(--suitcase-color);
+            border-radius: 25px;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 4px solid #8b4513; /* Dunklerer Rand */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: visible; /* Wichtig für die Flug-Animation */
+        }
+
+        /* Koffer-Griff */
+        .suitcase-area::before {
+            content: '';
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 25px;
+            background: #6f3711;
+            border-radius: 10px 10px 0 0;
+            border: 4px solid #8b4513;
+            border-bottom: none;
+        }
+
+        /* Koffer-Ecken (Metall) */
+        .corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: var(--suitcase-trim);
+            border-radius: 50%;
+            border: 3px solid #b8860b;
+        }
+        .top-left { top: -10px; left: -10px; }
+        .top-right { top: -10px; right: -10px; }
+        .bottom-left { bottom: -10px; left: -10px; }
+        .bottom-right { bottom: -10px; right: -10px; }
+
+        /* Reißverschluss-Linie */
+        .zipper {
+            position: absolute;
+            top: 15px;
+            bottom: 15px;
+            right: 25px;
+            width: 6px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #444,
+                #444 4px,
+                #999 4px,
+                #999 8px
+            );
+            border-radius: 3px;
+        }
+
+        /* Innenraum-Effekt */
+        .suitcase-inner {
+            width: 80%;
+            height: 80%;
+            background: rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        /* --- AUSWAHL-BEREICH (Rechts) --- */
+        .items-area {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .item-card {
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem; /* Große Emojis */
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s, background-color 0.2s;
+            border: 4px solid transparent;
+            position: relative; /* Für Animations-Ursprung */
+        }
+
+        /* Klick-Feedback */
+        .item-card:active {
+            transform: scale(0.92);
+        }
+
+        /* Feedback-Klassen */
+        .correct-blink {
+            animation: blink-green 0.6s;
+        }
+
+        .wrong-shake {
+            animation: shake-red 0.4s;
+        }
+
+        /* --- ENDE & NEUSTART --- */
+        #end-screen {
+            display: none; /* Standardmäßig versteckt */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #end-screen h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        #end-screen p { font-size: 1.2rem; margin-bottom: 30px; }
+
+        .restart-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4);
+            transition: background 0.2s;
+        }
+
+        .restart-btn:active {
+            transform: translateY(2px);
+        }
+
+        /* --- ANIMATIONEN --- */
+        @keyframes blink-green {
+            0%, 100% { background-color: white; }
+            50% { background-color: var(--success-color); border-color: #1e7e46; }
+        }
+
+        @keyframes shake-red {
+            0%, 100% { transform: translateX(0); background-color: white; }
+            20%, 60% { transform: translateX(-8px); background-color: var(--error-color); }
+            40%, 80% { transform: translateX(8px); background-color: var(--error-color); }
+        }
+
+        /* Die Flug-Animation (wird dynamisch per JS erstellt) */
+        .flying-item {
+            position: fixed;
+            font-size: 3.5rem;
+            z-index: 99;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="end-screen">
+        <h1>🎉 ¡Listo!</h1>
+        <p>La maleta está llena. ¡Buen viaje!</p>
+        <button class="restart-btn" onclick="restartGame()">Hacer la maleta de nuevo</button>
+    </div>
+
+    <div id="header-area">
+        <div id="instruction">Cargando juego...</div>
+        <div id="score-board">Objeto: <span id="current-item-num">1</span> / <span id="total-items">10</span></div>
+    </div>
+
+    <div id="game-container">
+        
+        <div class="suitcase-area" id="suitcase">
+            <div class="corner top-left"></div>
+            <div class="corner top-right"></div>
+            <div class="corner bottom-left"></div>
+            <div class="corner bottom-right"></div>
+            <div class="zipper"></div>
+            <div class="suitcase-inner"></div>
+        </div>
+        
+        <div class="items-area" id="options">
+            <div class="item-card" onclick="checkAnswer(0)"></div>
+            <div class="item-card" onclick="checkAnswer(1)"></div>
+            <div class="item-card" onclick="checkAnswer(2)"></div>
+            <div class="item-card" onclick="checkAnswer(3)"></div>
+        </div>
+    </div>
+
+    <script>
+        // Vokabel-Datenbank (Die korrekte Antwort ist IMMER an Index 0)
+        const allLevels = [
+            { target: "las gafas de sol", options: ["🕶️", "👓", "🥽", "🩺"] },
+            { target: "la camiseta azul", options: ["👕", "👔", "👗", "👘"] },
+            { target: "las botas de montaña", options: ["🥾", "👠", "👟", "👞"] },
+            { target: "el sombrero de verano", options: ["👒", "🎩", "🧢", "🎓"] },
+            { target: "el bañador", options: ["🩳", "👙", "👚", "👖"] },
+            { target: "el pasaporte", options: ["📕", "📗", "📓", "📙"] },
+            { target: "el cepillo de dientes", options: ["🪥", "🖌️", "🖍️", "🥢"] },
+            { target: "la crema solar", options: ["🧴", "🧯", "🧪", "🍯"] },
+            { target: "la cámara", options: ["📷", "📹", "📱", "🔍"] },
+            { target: "los auriculares", options: ["🎧", "🔈", "🎤", "🎻"] },
+            { target: "los calcetines", options: ["🧦", "🧤", "🧣", "🎒"] },
+            { target: "la toalla de playa", options: ["🟥", "🔵", "🟡", "🟢"] }, 
+            { target: "las chanclas", options: ["🩴", "👠", "👞", "👟"] },
+            { target: "el libro", options: ["📖", "🗒️", "🏫", "✏️"] },
+            { target: "el cargador", options: ["🔌", "🧵", "➰", "⛓️"] }
+        ];
+
+        let currentLevel = 0;
+        const totalLevelsToPlay = 10; // Wie viele Runden pro Spiel
+        let gameLevels = []; 
+        let currentCorrectEmoji = "";
+        let isAnimating = false; 
+
+        // Misch-Funktion (Fisher-Yates)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startGame() {
+            currentLevel = 0;
+            document.getElementById('end-screen').style.display = 'none';
+            document.getElementById('game-container').style.opacity = '1';
+            document.getElementById('total-items').innerText = totalLevelsToPlay;
+            
+            let shuffledRaw = shuffle([...allLevels]);
+            gameLevels = shuffledRaw.slice(0, totalLevelsToPlay);
+            
+            initLevel();
+        }
+
+        function initLevel() {
+            isAnimating = false;
+            const level = gameLevels[currentLevel];
+            document.getElementById('instruction').innerText = `Mete en la maleta: ${level.target}`;
+            document.getElementById('current-item-num').innerText = currentLevel + 1;
+            
+            currentCorrectEmoji = level.options[0]; 
+
+            let displayOptions = shuffle([...level.options]);
+            
+            const cards = document.querySelectorAll('.item-card');
+            cards.forEach((card, index) => {
+                card.innerText = displayOptions[index];
+                card.className = 'item-card'; 
+            });
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (isAnimating) return;
+
+            const cards = document.querySelectorAll('.item-card');
+            const clickedCard = cards[selectedIndex];
+            const clickedEmoji = clickedCard.innerText;
+
+            if (clickedEmoji === currentCorrectEmoji) {
+                isAnimating = true;
+                clickedCard.classList.add('correct-blink');
+                
+                animateItemToSuitcase(clickedCard, clickedEmoji);
+
+                setTimeout(nextLevel, 700);
+            } else {
+                clickedCard.classList.add('wrong-shake');
+                if (navigator.vibrate) navigator.vibrate(200);
+                
+                setTimeout(() => {
+                    clickedCard.classList.remove('wrong-shake');
+                }, 400);
+            }
+        }
+
+        function animateItemToSuitcase(sourceCard, emoji) {
+            const suitcase = document.getElementById('suitcase');
+            
+            const startRect = sourceCard.getBoundingClientRect();
+            const endRect = suitcase.getBoundingClientRect();
+
+            const flyer = document.createElement('div');
+            flyer.className = 'flying-item';
+            flyer.innerText = emoji;
+            flyer.style.left = startRect.left + 'px';
+            flyer.style.top = startRect.top + 'px';
+            flyer.style.width = startRect.width + 'px';
+            flyer.style.height = startRect.height + 'px';
+            flyer.style.display = 'flex';
+            flyer.style.justifyContent = 'center';
+            flyer.style.alignItems = 'center';
+
+            document.body.appendChild(flyer);
+
+            requestAnimationFrame(() => {
+                const targetX = endRect.left + (endRect.width / 2) - (startRect.width / 2);
+                const targetY = endRect.top + (endRect.height / 2) - (startRect.height / 2);
+
+                flyer.style.transform = `translate(${targetX - startRect.left}px, ${targetY - startRect.top}px) scale(0.2)`;
+                flyer.style.opacity = '0';
+            });
+
+            setTimeout(() => {
+                flyer.remove();
+            }, 600);
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            if (currentLevel >= gameLevels.length) {
+                gameOver();
+            } else {
+                initLevel();
+            }
+        }
+
+        function gameOver() {
+            document.getElementById('game-container').style.opacity = '0.3';
+            document.getElementById('end-screen').style.display = 'flex';
+            document.getElementById('instruction').innerText = "¡Conseguido!";
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        startGame();
+    </script>
+</body>
+</html>
