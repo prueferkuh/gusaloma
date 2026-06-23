@@ -205,7 +205,7 @@
         document.getElementById('current-category').innerText = kategorieName;
 
         // 2. Vokabeldaten laden
-        fetch('../vokabeln.json')
+        fetch('../../vokabeln.json')
             .then(response => response.json())
             .then(data => {
                 const katData = data.find(k => k.kategorie === kategorieName);
