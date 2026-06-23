@@ -261,8 +261,7 @@
 
     <div class="container">
         <h2>1. Wähle eine Vokabelkategorie:</h2>
-        <div class="category-grid" id="categoryGrid">
-            </div>
+        <div class="category-grid" id="categoryGrid"></div>
     </div>
 
     <div class="container">
@@ -304,6 +303,11 @@
                 <span class="badge">Natur & Tiere</span>
             </button>
 
+            <button class="game-btn disabled" id="btn-fischi" onclick="startGame('Fisch-Spiel')">
+                <span>🐟 Fisch-Spiel</span>
+                <span class="badge">Unterwasser</span>
+            </button>
+
             <button class="game-btn disabled" id="btn-memory" onclick="startGame('Memory')">
                 <span>🃏 Vokabel-Memory</span>
                 <span class="badge">Karten</span>
@@ -332,16 +336,13 @@
                 document.documentElement.classList.add('light-mode');
                 toggleInput.checked = true;
                 icon.textContent = '☀️';
-                logo.src = 'Logo.png'; // NEU: Lädt helles Logo
+                logo.src = 'Logo.png'; 
             } else {
                 icon.textContent = '🌙';
-                logo.src = 'invertLogo.png'; // NEU: Lädt dunkles Logo (Invertiert)
+                logo.src = 'invertLogo.png'; 
             }
         });
 
-        /**
-         * Schaltet zwischen Light- und Darkmode um & wechselt das Logo
-         */
         function toggleTheme() {
             const toggleInput = document.getElementById('theme-toggle');
             const icon = document.getElementById('theme-icon');
@@ -350,12 +351,12 @@
             if (toggleInput.checked) {
                 document.documentElement.classList.add('light-mode');
                 icon.textContent = '☀️';
-                logo.src = 'Logo.png'; // NEU: Wechselt zu Logo.png
+                logo.src = 'Logo.png'; 
                 localStorage.setItem('theme', 'light');
             } else {
                 document.documentElement.classList.remove('light-mode');
                 icon.textContent = '🌙';
-                logo.src = 'invertLogo.png'; // NEU: Wechselt zu invertLogo.png
+                logo.src = 'invertLogo.png'; 
                 localStorage.setItem('theme', 'dark');
             }
         }
@@ -411,6 +412,9 @@
                 dateiPfad = "spiele/memory.html";
             } else if (spielName === "Der Frosch") {
                 dateiPfad = "spiele/derFrosch.html";
+            } else if (spielName === "Fisch-Spiel") {
+                // NEU: Pfad zur fischi.html hinterlegt
+                dateiPfad = "spiele/fische/fischi.html";
             } else if (spielName === "Angelbär") {
                 dateiPfad = "spiele/angelnBaer/Angelnb7.html";
             } else if (spielName === "Ich packe meinen Koffer") {
@@ -419,6 +423,8 @@
                 dateiPfad = "spiele/pizza.html";
             } else if (spielName === "Amors Pfeil") {
                 dateiPfad = "spiele/amor/amor.html";
+            } else if (spielName === "Highway to Bilingual") {
+                dateiPfad = "spiele/highway.html"; // Beispiel-Fallback für Highway
             } else {
                 alert(`Das Spiel "${spielName}" wird aktuell noch von uns entwickelt und steht bald bereit!`);
                 return;
@@ -429,6 +435,7 @@
                 return;
             }
 
+            // Die automatische Verfügbarkeitsprüfung (HEAD-Request) bleibt unverändert aktiv
             fetch(dateiPfad, { method: 'HEAD' })
                 .then(response => {
                     if (response.ok) {
