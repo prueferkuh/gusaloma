@@ -89,7 +89,7 @@
             height: auto; /* Behält das Seitenverhältnis bei */
             box-sizing: border-box;
             
-            /* NEU: Verhindert Touch-Gesten (Scrollen) NUR auf dem Spielfeld */
+            /* Verhindert Touch-Gesten (Scrollen) NUR auf dem Spielfeld */
             touch-action: none; 
         }
 
@@ -180,6 +180,10 @@
         let falschesFutter = null;
         let kategorieName = "Essen und Trinken";
 
+        // NEU: Variablen für den Blink-Effekt bei Fehlern
+        let isBlinking = false;
+        let blinkToggle = false;
+
         // 1. Kategorie aus der URL holen
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('kategorie')) {
@@ -223,6 +227,7 @@
             ];
             dir = "RIGHT";
             score = 0;
+            isBlinking = false;
             document.getElementById('score-display').innerText = score;
             neueRunde();
             
@@ -288,14 +293,12 @@
         let touchStartX = 0;
         let touchStartY = 0;
 
-        // Wir hängen die Touch-Events jetzt direkt an das CANVAS, nicht mehr an das "document"
         canvas.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
         }, { passive: true });
 
         canvas.addEventListener('touchmove', e => {
-            // Blockiert das Scrollen NUR, wenn der Finger sich AUF dem Canvas bewegt
             e.preventDefault(); 
         }, { passive: false });
 
@@ -340,9 +343,20 @@
             ctx.fillStyle = "#ffffff";
             ctx.fillText(falschesFutter.text, falschesFutter.x, falschesFutter.y - 8);
 
+            // Wechselt den Blink-Zustand in jedem Frame, wenn isBlinking aktiv ist
+            if (isBlinking) {
+                blinkToggle = !blinkToggle;
+            }
+
             // Schlange zeichnen
             for (let i = 0; i < snake.length; i++) {
-                ctx.fillStyle = (i === 0) ? "#3498db" : "#2980b9";
+                if (isBlinking && blinkToggle) {
+                    // NEU: Rot blinken bei Schaden
+                    ctx.fillStyle = (i === 0) ? "#e74c3c" : "#c0392b";
+                } else {
+                    // Normale blaue Farben
+                    ctx.fillStyle = (i === 0) ? "#3498db" : "#2980b9";
+                }
                 ctx.fillRect(snake[i].x, snake[i].y, gridBox - 1, gridBox - 1);
             }
 
@@ -377,6 +391,12 @@
                 score = Math.max(0, score - 5);
                 document.getElementById('score-display').innerText = score;
                 
+                // NEU: Aktiviere das rote Blinken für 600 Millisekunden
+                isBlinking = true;
+                setTimeout(() => {
+                    isBlinking = false;
+                }, 600);
+
                 snake.unshift(newHead);
                 snake.pop(); 
                 if (snake.length > 2) { 
