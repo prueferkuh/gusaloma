@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Spanisch Lernen - Fisch Spiel</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #1cb5e0, #000046);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            color: white;
+        }
+
+        #header {
+            text-align: center;
+            padding: 15px;
+            font-size: 1.2rem;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            z-index: 5;
+        }
+
+        #game-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .left-side {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .right-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Der Wrapper steuert nun Grösse UND die Schwimm-Animation zum Ziel */
+        #main-fish-scale-wrapper {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), left 0.6s ease-in-out, top 0.6s ease-in-out;
+            position: relative;
+            left: 0px;
+            top: 0px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3;
+        }
+
+        .fish-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        @keyframes floatAnimation {
+            0% { transform: translate(0, 0px) rotate(0deg); }
+            50% { transform: translate(5px, -8px) rotate(1deg); }
+            100% { transform: translate(0, 0px) rotate(0deg); }
+        }
+
+        .floating {
+            animation: floatAnimation 4s ease-in-out infinite;
+        }
+
+        .number-bubble {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+            min-width: 80px;
+            transition: opacity 0.2s ease;
+        }
+
+        .right-side .number-bubble {
+            font-size: 1.4rem;
+            background: #ffeb3b;
+            color: #000;
+        }
+
+        .fish-img {
+            width: 120px;
+            height: auto;
+            object-fit: contain;
+            border: none;
+            outline: none;
+            min-height: 90px;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        #game-over h1 {
+            font-size: 2.5rem;
+            color: #4caf50;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: #2196f3;
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        Runde: <span id="current-round">1</span>/50 | Punkte: <span id="score">0</span>
+    </div>
+
+    <div id="game-container">
+        <div class="left-side">
+            <div id="main-fish-scale-wrapper">
+                <div class="fish-container floating" id="fisch1-container">
+                    <div id="target-number" class="number-bubble">5</div>
+                    <img src="fisch1.png" alt="Fisch 1" class="fish-img">
+                </div>
+            </div>
+        </div>
+
+        <div class="right-side">
+            <div class="fish-container floating" id="option-container-0" onclick="checkAnswer(0)" style="animation-delay: -1s;">
+                <div id="option-0" class="number-bubble">Spanisch 1</div>
+                <img src="fisch2.png" alt="Fisch 2" class="fish-img">
+            </div>
+
+            <div class="fish-container floating" id="option-container-1" onclick="checkAnswer(1)" style="animation-delay: -2s;">
+                <div id="option-1" class="number-bubble">Spanisch 2</div>
+                <img src="fisch3.png" alt="Fisch 3" class="fish-img">
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over">
+        <h1>¡Felicitaciones!</h1>
+        <p>Du hast alle 50 Zahlen durchgespielt!</p>
+        <p>Endpunkte: <span id="final-score">0</span></p>
+        <button class="btn" onclick="restartGame()">Von vorne beginnen</button>
+    </div>
+
+    <script>
+        const spanishNumbers = {
+            1: "uno", 2: "dos", 3: "tres", 4: "cuatro", 5: "cinco",
+            6: "seis", 7: "siete", 8: "ocho", 9: "nueve", 10: "diez",
+            11: "once", 12: "doce", 13: "trece", 14: "catorce", 15: "quince",
+            16: "dieciséis", 17: "diecisiete", 18: "dieciocho", 19: "diecinueve", 20: "veinte",
+            21: "veintiuno", 22: "veintidós", 23: "veintitrés", 24: "veinticuatro", 25: "veinticinco",
+            26: "veintiséis", 27: "veintisiete", 28: "veintiocho", 29: "veintinueve", 30: "treinta",
+            31: "treinta y uno", 32: "treinta y dos", 33: "treinta y tres", 34: "treinta y cuatro", 35: "treinta y cinco",
+            36: "treinta y seis", 37: "treinta y siete", 38: "treinta y ocho", 39: "treinta y nueve", 40: "cuarenta",
+            41: "cuarenta y uno", 42: "cuarenta y dos", 43: "cuarenta y tres", 44: "cuarenta y cuatro", 45: "cuarenta y cinco",
+            46: "cuarenta y seis", 47: "cuarenta y siete", 48: "cuarenta y oceans", 49: "cuarenta y nueve", 50: "cincuenta"
+        };
+
+        // Korrektur für Tippfehler bei 48 im vorherigen Datensatz
+        spanishNumbers[48] = "cuarenta y ocho";
+
+        let currentRound = 1;
+        let score = 0;
+        let currentScale = 1.0; 
+        let correctAnswerIndex = 0;
+        let usedNumbers = [];
+        let isAnimating = false; // Verhindert Mehrfachklicks während des "Essens"
+
+        function startGame() {
+            currentRound = 1;
+            score = 0;
+            currentScale = 1.0;
+            usedNumbers = [];
+            isAnimating = false;
+            document.getElementById('game-over').style.display = 'none';
+            resetFishPositions();
+            updateScoreboard();
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentRound > 50) {
+                endGame();
+                return;
+            }
+
+            document.getElementById('current-round').innerText = currentRound;
+
+            let targetNumber;
+            do {
+                targetNumber = Math.floor(Math.random() * 50) + 1;
+            } while (usedNumbers.includes(targetNumber) && usedNumbers.length < 50);
+            
+            usedNumbers.push(targetNumber);
+            document.getElementById('target-number').innerText = targetNumber;
+
+            const correctTranslation = spanishNumbers[targetNumber];
+
+            let wrongNumber;
+            do {
+                wrongNumber = Math.floor(Math.random() * 50) + 1;
+            } while (wrongNumber === targetNumber);
+            const wrongTranslation = spanishNumbers[wrongNumber];
+
+            correctAnswerIndex = Math.floor(Math.random() * 2);
+
+            if (correctAnswerIndex === 0) {
+                document.getElementById('option-0').innerText = correctTranslation;
+                document.getElementById('option-1').innerText = wrongTranslation;
+            } else {
+                document.getElementById('option-0').innerText = wrongTranslation;
+                document.getElementById('option-1').innerText = correctTranslation;
+            }
+
+            resetFishPositions();
+            isAnimating = false;
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (isAnimating) return; // Klicks während der Animation ignorieren
+            isAnimating = true;
+
+            const mainFishWrapper = document.getElementById('main-fish-scale-wrapper');
+            const targetFishContainer = document.getElementById(`option-container-${selectedIndex}`);
+            
+            // Koordinaten ermitteln
+            const mainRect = mainFishWrapper.getBoundingClientRect();
+            const targetRect = targetFishContainer.getBoundingClientRect();
+
+            // Distanz berechnen (Zentrum zu Zentrum)
+            const deltaX = (targetRect.left + targetRect.width / 2) - (mainRect.left + mainRect.width / 2);
+            const deltaY = (targetRect.top + targetRect.height / 2) - (mainRect.top + mainRect.height / 2);
+
+            // 1. Hauptfisch fliegt zum ausgewählten Fisch
+            mainFishWrapper.style.left = `${deltaX}px`;
+            mainFishWrapper.style.top = `${deltaY}px`;
+
+            // Punkte & Skalierung im Hintergrund anpassen
+            if (selectedIndex === correctAnswerIndex) {
+                score++;
+                currentScale += 0.05;
+            } else {
+                currentScale = Math.max(0.5, currentScale - 0.15);
+            }
+
+            // 2. Kurz vor der Ankunft (nach 400ms) verschwindet der gefressene Fisch
+            setTimeout(() => {
+                targetFishContainer.style.opacity = '0';
+            }, 400);
+
+            // 3. Nach dem "Fressen" (600ms) Werte aktualisieren und nächste Runde vorbereiten
+            setTimeout(() => {
+                applyScale();
+                updateScoreboard();
+                currentRound++;
+                
+                // Sanftes Ausblenden des Hauptfisches beim Zurücksetzen, damit er nicht rückwärts "beamt"
+                mainFishWrapper.style.styleOpacity = '0'; 
+                
+                setTimeout(nextQuestion, 200);
+            }, 700);
+        }
+
+        function resetFishPositions() {
+            const mainFishWrapper = document.getElementById('main-fish-scale-wrapper');
+            // Transition kurz ausschalten, damit das Zurücksetzen unsichtbar geschieht
+            mainFishWrapper.style.transition = 'none';
+            mainFishWrapper.style.left = '0px';
+            mainFishWrapper.style.top = '0px';
+            applyScale();
+
+            // Antwort-Fische wieder sichtbar machen
+            document.getElementById('option-container-0').style.opacity = '1';
+            document.getElementById('option-container-1').style.opacity = '1';
+
+            // Transition wieder aktivieren
+            setTimeout(() => {
+                mainFishWrapper.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), left 0.6s ease-in-out, top 0.6s ease-in-out';
+            }, 50);
+        }
+
+        function applyScale() {
+            const scaleWrapper = document.getElementById('main-fish-scale-wrapper');
+            scaleWrapper.style.transform = `scale(${currentScale})`;
+        }
+
+        function updateScoreboard() {
+            document.getElementById('score').innerText = score;
+        }
+
+        function endGame() {
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('game-over').style.display = 'flex';
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        window.onload = startGame;
+    </script>
+</body>
+</html>
