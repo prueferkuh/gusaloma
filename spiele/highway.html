@@ -6,6 +6,29 @@
     <title>Highway to Bilingual</title>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Zurück-Button Styling */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 60;
+            background: rgba(255, 255, 255, 0.9);
+            color: #2c3e50;
+            border: 2px solid #3498db;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+        }
+        .back-btn:hover {
+            background: #3498db;
+            color: white;
+            transform: translateY(-2px);
+        }
+
         #ui {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             z-index: 50; text-align: center; width: 90%; pointer-events: none;
@@ -14,6 +37,7 @@
             background: rgba(255, 255, 255, 0.95); padding: 12px 25px;
             border-radius: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             border: 3px solid #3498db;
+            display: inline-block;
         }
         .word { font-size: 32px; font-weight: bold; color: #2c3e50; }
         
@@ -33,10 +57,12 @@
 </head>
 <body>
 
+<a href="../index.html" class="back-btn">⬅ Zurück</a>
+
 <div id="ui">
     <div class="card">
-        <div style="font-size: 12px; color: #7f8c8d; font-weight: bold;">FINDE:</div>
-        <div class="word" id="targetWord">...</div>
+        <div style="font-size: 12px; color: #7f8c8d; font-weight: bold;" id="catLabel">FINDE:</div>
+        <div class="word" id="targetWord">Lade Vokabeln...</div>
     </div>
 </div>
 
@@ -52,12 +78,14 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const targetDisplay = document.getElementById('targetWord');
+    const catLabel = document.getElementById('catLabel');
     const overlay = document.getElementById('gameOverOverlay');
     const failMsg = document.getElementById('failMessage');
     const scoreMsg = document.getElementById('finalScore');
     const restartBtn = document.getElementById('restartBtn');
 
-    const vocab = [
+    // Lokaler Fallback, falls die JSON oder Kategorie nicht geladen werden kann
+    let vocab = [
         { de: "das Auto", es: "el coche", icon: "🚗" },
         { de: "der LKW", es: "el camión", icon: "🚛" },
         { de: "das Motorrad", es: "la moto", icon: "🏍️" },
@@ -67,14 +95,7 @@
         { de: "der Krankenwagen", es: "la ambulancia", icon: "🚑" },
         { de: "die Feuerwehr", es: "el camión de bomberos", icon: "🚒" },
         { de: "das Polizeiauto", es: "el coche de policía", icon: "🚓" },
-        { de: "das Taxi", es: "el taxi", icon: "🚕" },
-        { de: "der Roller", es: "el escúter", icon: "🛵" },
-        { de: "das Wohnmobil", es: "la autocaravana", icon: "🚐" },
-        { de: "der Abschleppwagen", es: "la grúa", icon: "🛻" },
-        { de: "der Lieferwagen", es: "la furgoneta", icon: "🚚" },
-        { de: "der Jeep", es: "el todoterreno", icon: "🚙" },
-        { de: "das Rennauto", es: "el coche de carreras", icon: "🏎️" },
-        { de: "das Elektroauto", es: "el coche eléctrico", icon: "⚡" }
+        { de: "das Taxi", es: "el taxi", icon: "🚕" }
     ];
 
     let currentTask = {};
@@ -83,6 +104,29 @@
     let clouds = [];
     let gameOver = false;
     let score = 0;
+    let gameInitiated = false;
+
+    // URL-Parameter auslesen
+    const urlParams = new URLSearchParams(window.location.search);
+    const gewaehlteKategorie = urlParams.get('kategorie');
+
+    // Vokabeln aus der zentralen JSON abrufen
+    fetch('../vokabeln.json')
+        .then(response => response.json())
+        .then(data => {
+            if (gewaehlteKategorie) {
+                const gefundeneKategorie = data.find(item => item.kategorie === gewaehlteKategorie);
+                if (gefundeneKategorie && gefundeneKategorie.vokabeln && gefundeneKategorie.vokabeln.length > 0) {
+                    vocab = gefundeneKategorie.vokabeln;
+                    catLabel.innerText = `${gewaehlteKategorie.toUpperCase()} - FINDE:`;
+                }
+            }
+            initGame();
+        })
+        .catch(error => {
+            console.warn("Konnte vokabeln.json nicht laden, nutze Fallback-Fahrzeuge:", error);
+            initGame();
+        });
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -90,6 +134,7 @@
     }
 
     function spawnTask() {
+        if (vocab.length === 0) return;
         currentTask = vocab[Math.floor(Math.random() * vocab.length)];
         targetDisplay.innerText = currentTask.de;
     }
@@ -119,7 +164,6 @@
 
     class Vehicle {
         constructor() {
-            // Ausgewogene 45% Chance auf das richtige Auto
             if (Math.random() < 0.45) {
                 this.data = currentTask;
             } else {
@@ -127,7 +171,9 @@
             }
             this.x = -160;
             this.y = canvas.height * 0.82; 
-            this.speed = 2.1 + Math.random() * 1.6; // MITTELDING GESCHWINDIGKEIT
+            this.speed = 2.1 + Math.random() * 1.6;
+            // Falls das Wort kein Icon besitzt, wird ein Auto als Standard gesetzt
+            this.icon = this.data.icon || "🚗"; 
         }
         draw() {
             ctx.save();
@@ -139,7 +185,7 @@
             ctx.scale(-1, 1);
             ctx.font = "105px serif";
             ctx.textAlign = "center";
-            ctx.fillText(this.data.icon, 0, 0);
+            ctx.fillText(this.icon, 0, 0);
             ctx.restore();
         }
         update() { this.x += this.speed; }
@@ -151,7 +197,7 @@
         ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.5);
         trees.forEach((t, i) => { t.update(); t.draw(); if (t.x < -160) trees.splice(i, 1); });
         
-        ctx.fillStyle = "#7f8c8d"; // Straße (etwas dunkleres Grau)
+        ctx.fillStyle = "#7f8c8d"; 
         ctx.fillRect(0, canvas.height * 0.75, canvas.width, canvas.height * 0.15);
         ctx.strokeStyle = "rgba(255,255,255,0.7)";
         ctx.setLineDash([25, 25]);
@@ -164,10 +210,9 @@
     }
 
     function handleInput(ex, ey) {
-        if (gameOver) return;
+        if (gameOver || !gameInitiated) return;
         for (let i = vehicles.length - 1; i >= 0; i--) {
             let v = vehicles[i];
-            // Präziser Klick-Radius
             if (ex > v.x - 75 && ex < v.x + 75 && ey > v.y - 115 && ey < v.y + 35) {
                 if (v.data.es === currentTask.es) {
                     score++;
@@ -197,7 +242,7 @@
     }
 
     function gameLoop() {
-        if (gameOver) return;
+        if (gameOver || !gameInitiated) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackground();
         vehicles.forEach((v, i) => {
@@ -210,18 +255,22 @@
         requestAnimationFrame(gameLoop);
     }
 
+    // Spielstart-Initialisierung nach dem Laden der Daten
+    function initGame() {
+        gameInitiated = true;
+        resize();
+        spawnTask();
+        gameLoop();
+    }
+
     canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e.touches[0].clientX, e.touches[0].clientY); });
     canvas.addEventListener('mousedown', (e) => handleInput(e.clientX, e.clientY));
     restartBtn.addEventListener('click', restartGame);
     window.addEventListener('resize', resize);
 
-    setInterval(() => { if(!gameOver) clouds.push(new Cloud()); }, 4000);
-    setInterval(() => { if(!gameOver) trees.push(new Tree()); }, 2200);
-    setInterval(() => { if(!gameOver) vehicles.push(new Vehicle()); }, 2800);
-
-    resize();
-    spawnTask();
-    gameLoop();
+    setInterval(() => { if(!gameOver && gameInitiated) clouds.push(new Cloud()); }, 4000);
+    setInterval(() => { if(!gameOver && gameInitiated) trees.push(new Tree()); }, 2200);
+    setInterval(() => { if(!gameOver && gameInitiated) vehicles.push(new Vehicle()); }, 2800);
 </script>
 </body>
 </html>
