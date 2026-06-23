@@ -34,6 +34,17 @@
             text-align: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             z-index: 10;
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            left: 15px;
+            top: 22px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
         }
 
         #instruction {
@@ -118,15 +129,21 @@
             background: white;
             border: 2px solid #e0e0e0;
             border-radius: 15px;
-            padding: 20px 10px;
+            padding: 15px 10px;
             text-align: center;
             cursor: pointer;
-            font-size: 2.5rem;
+            font-size: 1.3rem;
             transition: all 0.2s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            gap: 5px;
+        }
+
+        .ingredient-btn .emoji {
+            font-size: 2.2rem;
         }
 
         .ingredient-btn.disabled {
@@ -155,17 +172,20 @@
                 flex-direction: row;
                 overflow-x: auto;
                 overflow-y: hidden;
-                min-height: 100px;
+                min-height: 110px;
             }
-            .ingredient-btn { min-width: 80px; }
+            .ingredient-btn { min-width: 100px; padding: 5px; font-size: 0.9rem; }
+            .ingredient-btn .emoji { font-size: 1.6rem; }
             #pizza-base { width: 200px; height: 200px; }
+            .back-link { top: 12px; position: relative; display: block; margin-bottom: 5px;}
         }
     </style>
 </head>
 <body>
 
     <div id="header">
-        <div id="instruction">Pon en la pizza:</div>
+        <a href="../../index.html" class="back-link">← Menü</a>
+        <div id="instruction">Pon en la pizza (Kat: <span id="cat-title">...</span>):</div>
         <div id="target-word">Cargando...</div>
     </div>
 
@@ -181,40 +201,87 @@
     </div>
 
     <script>
-        const vocabulary = [
-            { es: "el queso", menu: "🧀", pizza: "🧀" },
-            { es: "el tomate", menu: "🍅", pizza: "🍅" },
-            { es: "el champiñón", menu: "🍄", pizza: "🍄" },
-            { es: "el pimiento", menu: "🫑", pizza: "🫑" },
-            { es: "la cebolla", menu: "🧅", pizza: "⚪" }, // Zwiebelringe statt ganzer Zwiebel
-            { es: "la aceituna", menu: "🫒", pizza: "⚫" }, // Olivenstücke
-            { es: "el maíz", menu: "🌽", pizza: "🟡" },    // Maiskörner statt Kolben
-            { es: "la piña", menu: "🍍", pizza: "🍍" },
-            { es: "el jamón", menu: "🍖", pizza: "🥩" },
-            { es: "el salami", menu: "🍕", pizza: "🔴" },
-            { es: "el ajo", menu: "🧄", pizza: "🧄" },
-            { es: "el chile", menu: "🌶️", pizza: "🌶️" },
-            { es: "la gamba", menu: "🦐", pizza: "🦐" },
-            { es: "el huevo", menu: "🥚", pizza: "🍳" },
-            { es: "la albahaca", menu: "🌿", pizza: "🍃" }
-        ];
+        // Lokales Backup-System, falls in der JSON keine Emojis existieren
+        const emojiMapping = {
+            "el queso": { menu: "🧀", pizza: "🧀" },
+            "el tomate": { menu: "🍅", pizza: "🍅" },
+            "el champiñón": { menu: "🍄", pizza: "🍄" },
+            "el pimiento": { menu: "🫑", pizza: "🫑" },
+            "la cebolla": { menu: "🧅", pizza: "⚪" },
+            "la aceituna": { menu: "🫒", pizza: "⚫" },
+            "el maíz": { menu: "🌽", pizza: "🟡" },
+            "la piña": { menu: "🍍", pizza: "🍍" },
+            "el jamón": { menu: "🍖", pizza: "🥩" },
+            "el salami": { menu: "🍕", pizza: "🔴" },
+            "el ajo": { menu: "🧄", pizza: "🧄" },
+            "el chile": { menu: "🌶️", pizza: "🌶️" },
+            "la gamba": { menu: "🦐", pizza: "🦐" },
+            "el huevo": { menu: "🥚", pizza: "🍳" },
+            "la albahaca": { menu: "🌿", pizza: "🍃" }
+        };
 
+        let vocabulary = [];
         let currentTarget;
         let score = 0;
         let usedInCurrentRound = [];
+        let kategorieName = "Essen"; // Standard-Fallback
+
+        // 1. Kategorie aus URL holen
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('kategorie')) {
+            kategorieName = urlParams.get('kategorie');
+        }
+        document.getElementById('cat-title').innerText = kategorieName;
+
+        // 2. Daten dynamisch aus der vokabeln.json laden
+        fetch('../vokabeln.json')
+            .then(response => response.json())
+            .then(data => {
+                const katData = data.find(k => k.kategorie === kategorieName);
+                if (katData && katData.vokabeln.length > 0) {
+                    
+                    // JSON-Struktur in das vom Pizza-Spiel erwartete Format konvertieren
+                    vocabulary = katData.vokabeln.map(v => {
+                        // Wenn Emojis direkt in der JSON sind, nutzen wir diese, sonst das Mapping, sonst ein Standard-Icon
+                        const mapping = emojiMapping[v.es.toLowerCase()] || { menu: "🍕", pizza: "🍕" };
+                        return {
+                            id: v.id,
+                            es: v.es,
+                            de: v.de,
+                            menu: v.emoji || mapping.menu,
+                            pizza: v.emoji || mapping.pizza
+                        };
+                    });
+
+                    initGame();
+                } else {
+                    document.getElementById('target-word').innerText = "Fehler!";
+                    alert(`Kategorie "${kategorieName}" wurde nicht gefunden oder ist leer.`);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('target-word').innerText = "Fehler!";
+                alert("vokabeln.json konnte nicht geladen werden.");
+            });
 
         function initGame() {
+            if (vocabulary.length === 0) return;
+            
             const menu = document.getElementById('ingredients-menu');
             menu.innerHTML = '';
             usedInCurrentRound = [];
             score = 0;
             
-            const shuffled = [...vocabulary].sort(() => 0.5 - Math.random());
+            // Begrenze Optionen auf maximal 15 zufällige Vokabeln aus der gewählten Kategorie
+            const shuffled = [...vocabulary].sort(() => 0.5 - Math.random()).slice(0, 15);
             
             shuffled.forEach(item => {
                 const btn = document.createElement('div');
                 btn.className = 'ingredient-btn';
-                btn.innerHTML = item.menu;
+                
+                // Falls kein passendes Emoji existiert, zeigen wir Text an
+                btn.innerHTML = `<span class="emoji">${item.menu}</span><span style="font-size:0.75rem;">${item.de}</span>`;
                 btn.onclick = () => checkChoice(item, btn);
                 menu.appendChild(btn);
             });
@@ -244,7 +311,9 @@
                 
                 document.getElementById('pizza-sauce').style.display = 'block';
                 
-                if (score >= 5) {
+                // Gewonnen, wenn alle verfügbaren Vokabeln (oder max. 5) richtig platziert wurden
+                const rundenZiel = Math.min(5, vocabulary.length);
+                if (score >= rundenZiel) {
                     document.getElementById('target-word').innerText = "¡Lista!";
                     document.getElementById('oven-btn').style.display = 'block';
                 } else {
@@ -258,7 +327,6 @@
 
         function addIngredientToPizza(pizzaEmoji) {
             const layer = document.getElementById('ingredients-layer');
-            // Mehr Teilchen bei Mais und Zwiebeln für Realismus
             const count = (pizzaEmoji === "🟡" || pizzaEmoji === "⚪") ? 10 : 5;
             
             for(let i=0; i<count; i++) {
@@ -266,7 +334,6 @@
                 span.className = 'ingredient-on-pizza';
                 span.innerText = pizzaEmoji;
                 
-                // Maiskörner und Zwiebeln kleiner machen
                 if(pizzaEmoji === "🟡") span.style.fontSize = "12px";
                 if(pizzaEmoji === "⚪") span.style.fontSize = "18px";
 
@@ -285,8 +352,6 @@
             document.getElementById('oven-btn').style.display = 'none';
             initGame();
         }
-
-        initGame();
     </script>
 </body>
 </html>
