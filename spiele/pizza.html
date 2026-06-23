@@ -184,7 +184,7 @@
 <body>
 
     <div id="header">
-        <a href="../../index.html" class="back-link">← Menü</a>
+        <a href="../index.html" class="back-link">← Menü</a>
         <div id="instruction">Pon en la pizza (Kat: <span id="cat-title">...</span>):</div>
         <div id="target-word">Cargando...</div>
     </div>
@@ -222,7 +222,7 @@
         let vocabulary = [];
         let currentTarget;
         let score = 0;
-        let usedInCurrentRoundIDs = []; // Geändert auf IDs, um Fehler zu vermeiden
+        let usedInCurrentRoundIDs = []; 
         let kategorieName = "Essen"; 
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -240,7 +240,7 @@
                     vocabulary = katData.vokabeln.map(v => {
                         const mapping = emojiMapping[v.es.toLowerCase().trim()] || { menu: "🍕", pizza: "🍕" };
                         return {
-                            id: v.id || Math.random().toString(36), // Sicherstellen, dass eine ID da ist
+                            id: v.id || Math.random().toString(36), 
                             es: v.es,
                             de: v.de,
                             menu: v.emoji || mapping.menu,
@@ -262,38 +262,60 @@
 
         function initGame() {
             if (vocabulary.length === 0) return;
-            
-            const menu = document.getElementById('ingredients-menu');
-            menu.innerHTML = '';
             usedInCurrentRoundIDs = [];
             score = 0;
             
-            // Wichtig: Wir mischen die geladenen Wörter direkt für das Menü
-            const shuffled = [...vocabulary].sort(() => 0.5 - Math.random());
-            
-            shuffled.forEach(item => {
-                const btn = document.createElement('div');
-                btn.className = 'ingredient-btn';
-                btn.id = "btn-" + item.id; // Button bekommt ID zugewiesen
-                btn.innerHTML = `<span class="emoji">${item.menu}</span><span style="font-size:0.75rem;">${item.de}</span>`;
-                btn.onclick = () => checkChoice(item, btn);
-                menu.appendChild(btn);
-            });
-
             pickNewWord();
         }
 
         function pickNewWord() {
-            // Filtert ungenutzte Wörter anhand der ID
             const available = vocabulary.filter(v => !usedInCurrentRoundIDs.includes(v.id));
+            
             if (available.length > 0) {
                 currentTarget = available[Math.floor(Math.random() * available.length)];
                 document.getElementById('target-word').innerText = currentTarget.es;
+                
+                // Generiere genau jetzt die maximal 8 Antwort-Buttons
+                renderMenuButtons();
             }
         }
 
+        function renderMenuButtons() {
+            const menu = document.getElementById('ingredients-menu');
+            menu.innerHTML = '';
+
+            // 1. Die richtige Antwort MUSS im Menü sein
+            let auswahl = [currentTarget];
+
+            // 2. Fülle mit falschen Antworten auf, bis wir 8 (oder alle verfügbaren) haben
+            let falscheOptionen = vocabulary.filter(v => v.id !== currentTarget.id);
+            falscheOptionen.sort(() => 0.5 - Math.random());
+
+            while (auswahl.length < Math.min(8, vocabulary.length)) {
+                auswahl.push(falscheOptionen.pop());
+            }
+
+            // 3. Durchmische die 8 Knöpfe, damit die richtige Antwort nicht immer oben steht
+            auswahl.sort(() => 0.5 - Math.random());
+
+            // 4. Knöpfe im HTML erzeugen
+            auswahl.forEach(item => {
+                const btn = document.createElement('div');
+                btn.className = 'ingredient-btn';
+                btn.id = "btn-" + item.id;
+                
+                // Falls das Wort in dieser Runde schon einmal richtig getippt wurde, bleibt der Knopf ausgegraut
+                if (usedInCurrentRoundIDs.includes(item.id)) {
+                    btn.classList.add('disabled');
+                }
+
+                btn.innerHTML = `<span class="emoji">${item.menu}</span><span style="font-size:0.75rem;">${item.de}</span>`;
+                btn.onclick = () => checkChoice(item, btn);
+                menu.appendChild(btn);
+            });
+        }
+
         function checkChoice(item, element) {
-            // Sicherer ID-Vergleich statt Text-Vergleich
             if (item.id === currentTarget.id) {
                 usedInCurrentRoundIDs.push(item.id);
                 element.classList.add('disabled');
