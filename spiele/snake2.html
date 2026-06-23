@@ -13,9 +13,8 @@
             --text-color: #ffffff;
         }
 
-        /* Verhindert das Standard-Wischen zum Aktualisieren und fixiert den Bildschirm */
+        /* Erlaubt das Scrollen der Seite wieder ganz normal */
         html, body {
-            overscroll-behavior-y: contain;
             margin: 0;
             padding: 0;
             background-color: var(--bg-color);
@@ -25,10 +24,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            
-            /* Verhindert ungewolltes Scrollen und den Gummiband-Effekt auf Mobilgeräten */
-            overflow: hidden; 
-            touch-action: none; 
         }
 
         body {
@@ -93,6 +88,9 @@
             width: 100%; /* Passt sich der Breite des Containers an */
             height: auto; /* Behält das Seitenverhältnis bei */
             box-sizing: border-box;
+            
+            /* NEU: Verhindert Touch-Gesten (Scrollen) NUR auf dem Spielfeld */
+            touch-action: none; 
         }
 
         #controls-hint {
@@ -264,7 +262,6 @@
             while(aufSchlange) {
                 pos = {
                     x: Math.floor(Math.random() * (canvas.width / gridBox)) * gridBox,
-                    // Die Y-Koordinate startet bei 1 statt 0, damit über dem Futter Platz für die Schrift bleibt
                     y: Math.floor(Math.random() * ((canvas.height / gridBox) - 1) + 1) * gridBox
                 };
                 aufSchlange = snake.some(s => s.x === pos.x && s.y === pos.y);
@@ -276,7 +273,7 @@
         document.addEventListener('keydown', e => {
             const k = e.keyCode;
             
-            // Verhindert das Standard-Scrollen bei Betätigung der Pfeiltasten
+            // Verhindert das Standard-Scrollen NUR bei den Pfeiltasten
             if ([37, 38, 39, 40].includes(k)) {
                 e.preventDefault();
             }
@@ -291,22 +288,22 @@
         let touchStartX = 0;
         let touchStartY = 0;
 
-        // passive: false wird benötigt, damit e.preventDefault() wirksam das Scrollen blockieren kann
-        document.addEventListener('touchstart', e => {
+        // Wir hängen die Touch-Events jetzt direkt an das CANVAS, nicht mehr an das "document"
+        canvas.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
-        }, { passive: false });
+        }, { passive: true });
 
-        document.addEventListener('touchmove', e => {
-            // Blockiert die Scroll-Bewegung des Browsers während des Wischens
+        canvas.addEventListener('touchmove', e => {
+            // Blockiert das Scrollen NUR, wenn der Finger sich AUF dem Canvas bewegt
             e.preventDefault(); 
         }, { passive: false });
 
-        document.addEventListener('touchend', e => {
+        canvas.addEventListener('touchend', e => {
             let touchEndX = e.changedTouches[0].screenX;
             let touchEndY = e.changedTouches[0].screenY;
             handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
-        }, { passive: false });
+        }, { passive: true });
 
         function handleSwipe(x1, y1, x2, y2) {
             const diffX = x2 - x1;
@@ -335,13 +332,13 @@
             ctx.fillStyle = "#f1c40f";
             ctx.fillRect(richtigesFutter.x, richtigesFutter.y, gridBox - 1, gridBox - 1);
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 16px sans-serif"; // Schriftgröße auf 16px erhöht
-            ctx.fillText(richtigesFutter.text, richtigesFutter.x, richtigesFutter.y - 8); // Abstand angepasst
+            ctx.font = "bold 16px sans-serif";
+            ctx.fillText(richtigesFutter.text, richtigesFutter.x, richtigesFutter.y - 8);
 
             ctx.fillStyle = "#f1c40f";
             ctx.fillRect(falschesFutter.x, falschesFutter.y, gridBox - 1, gridBox - 1);
             ctx.fillStyle = "#ffffff";
-            ctx.fillText(falschesFutter.text, falschesFutter.x, falschesFutter.y - 8); // Abstand angepasst
+            ctx.fillText(falschesFutter.text, falschesFutter.x, falschesFutter.y - 8);
 
             // Schlange zeichnen
             for (let i = 0; i < snake.length; i++) {
