@@ -201,7 +201,6 @@
     </div>
 
     <script>
-        // Lokales Backup-System, falls in der JSON keine Emojis existieren
         const emojiMapping = {
             "el queso": { menu: "🧀", pizza: "🧀" },
             "el tomate": { menu: "🍅", pizza: "🍅" },
@@ -223,29 +222,25 @@
         let vocabulary = [];
         let currentTarget;
         let score = 0;
-        let usedInCurrentRound = [];
-        let kategorieName = "Essen"; // Standard-Fallback
+        let usedInCurrentRoundIDs = []; // Geändert auf IDs, um Fehler zu vermeiden
+        let kategorieName = "Essen"; 
 
-        // 1. Kategorie aus URL holen
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('kategorie')) {
             kategorieName = urlParams.get('kategorie');
         }
         document.getElementById('cat-title').innerText = kategorieName;
 
-        // 2. Daten dynamisch aus der vokabeln.json laden
         fetch('../vokabeln.json')
             .then(response => response.json())
             .then(data => {
                 const katData = data.find(k => k.kategorie === kategorieName);
                 if (katData && katData.vokabeln.length > 0) {
                     
-                    // JSON-Struktur in das vom Pizza-Spiel erwartete Format konvertieren
                     vocabulary = katData.vokabeln.map(v => {
-                        // Wenn Emojis direkt in der JSON sind, nutzen wir diese, sonst das Mapping, sonst ein Standard-Icon
-                        const mapping = emojiMapping[v.es.toLowerCase()] || { menu: "🍕", pizza: "🍕" };
+                        const mapping = emojiMapping[v.es.toLowerCase().trim()] || { menu: "🍕", pizza: "🍕" };
                         return {
-                            id: v.id,
+                            id: v.id || Math.random().toString(36), // Sicherstellen, dass eine ID da ist
                             es: v.es,
                             de: v.de,
                             menu: v.emoji || mapping.menu,
@@ -270,17 +265,16 @@
             
             const menu = document.getElementById('ingredients-menu');
             menu.innerHTML = '';
-            usedInCurrentRound = [];
+            usedInCurrentRoundIDs = [];
             score = 0;
             
-            // Begrenze Optionen auf maximal 15 zufällige Vokabeln aus der gewählten Kategorie
-            const shuffled = [...vocabulary].sort(() => 0.5 - Math.random()).slice(0, 15);
+            // Wichtig: Wir mischen die geladenen Wörter direkt für das Menü
+            const shuffled = [...vocabulary].sort(() => 0.5 - Math.random());
             
             shuffled.forEach(item => {
                 const btn = document.createElement('div');
                 btn.className = 'ingredient-btn';
-                
-                // Falls kein passendes Emoji existiert, zeigen wir Text an
+                btn.id = "btn-" + item.id; // Button bekommt ID zugewiesen
                 btn.innerHTML = `<span class="emoji">${item.menu}</span><span style="font-size:0.75rem;">${item.de}</span>`;
                 btn.onclick = () => checkChoice(item, btn);
                 menu.appendChild(btn);
@@ -290,28 +284,24 @@
         }
 
         function pickNewWord() {
-            const available = vocabulary.filter(v => !usedInCurrentRound.includes(v.es));
+            // Filtert ungenutzte Wörter anhand der ID
+            const available = vocabulary.filter(v => !usedInCurrentRoundIDs.includes(v.id));
             if (available.length > 0) {
-                let nextTarget;
-                do {
-                    nextTarget = available[Math.floor(Math.random() * available.length)];
-                } while (available.length > 1 && currentTarget && nextTarget.es === currentTarget.es);
-                
-                currentTarget = nextTarget;
+                currentTarget = available[Math.floor(Math.random() * available.length)];
                 document.getElementById('target-word').innerText = currentTarget.es;
             }
         }
 
         function checkChoice(item, element) {
-            if (item.es === currentTarget.es) {
-                usedInCurrentRound.push(item.es);
+            // Sicherer ID-Vergleich statt Text-Vergleich
+            if (item.id === currentTarget.id) {
+                usedInCurrentRoundIDs.push(item.id);
                 element.classList.add('disabled');
                 addIngredientToPizza(item.pizza);
                 score++;
                 
                 document.getElementById('pizza-sauce').style.display = 'block';
                 
-                // Gewonnen, wenn alle verfügbaren Vokabeln (oder max. 5) richtig platziert wurden
                 const rundenZiel = Math.min(5, vocabulary.length);
                 if (score >= rundenZiel) {
                     document.getElementById('target-word').innerText = "¡Lista!";
