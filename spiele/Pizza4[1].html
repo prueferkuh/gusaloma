@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pizza de Vocabulario</title>
+    <style>
+        :root {
+            --pizza-color: #f0d38e;
+            --sauce-color: #d32f2f;
+            --primary-green: #2e7d32;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #header {
+            background: var(--primary-green);
+            color: white;
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        #instruction {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        #target-word {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 5px 0;
+            color: #ffeb3b;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        #game-container {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            overflow: hidden;
+            padding: 15px;
+            gap: 20px;
+        }
+
+        #pizza-area {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        #pizza-base {
+            width: 300px;
+            height: 300px;
+            background-color: var(--pizza-color);
+            border: 15px solid #d4b475;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        #pizza-sauce {
+            position: absolute;
+            top: 5%; left: 5%; right: 5%; bottom: 5%;
+            background-color: var(--sauce-color);
+            border-radius: 50%;
+            display: none;
+        }
+
+        .ingredient-on-pizza {
+            position: absolute;
+            font-size: 28px;
+            z-index: 5;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #ingredients-menu {
+            flex: 1;
+            min-width: 140px;
+            background: #f1f3f4;
+            border-radius: 20px;
+            padding: 10px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            border: 1px solid #ddd;
+        }
+
+        .ingredient-btn {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 2.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .ingredient-btn.disabled {
+            opacity: 0.2;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+
+        #oven-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: #ff5722;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            display: none;
+        }
+
+        @media (max-width: 650px) {
+            #game-container { flex-direction: column; }
+            #ingredients-menu {
+                display: flex;
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: hidden;
+                min-height: 100px;
+            }
+            .ingredient-btn { min-width: 80px; }
+            #pizza-base { width: 200px; height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <div id="instruction">Pon en la pizza:</div>
+        <div id="target-word">Cargando...</div>
+    </div>
+
+    <div id="game-container">
+        <div id="pizza-area">
+            <div id="pizza-base">
+                <div id="pizza-sauce"></div>
+                <div id="ingredients-layer"></div>
+            </div>
+            <button id="oven-btn" onclick="nextPizza()">¡Al horno! ➔</button>
+        </div>
+        <div id="ingredients-menu"></div>
+    </div>
+
+    <script>
+        const vocabulary = [
+            { es: "el queso", menu: "🧀", pizza: "🧀" },
+            { es: "el tomate", menu: "🍅", pizza: "🍅" },
+            { es: "el champiñón", menu: "🍄", pizza: "🍄" },
+            { es: "el pimiento", menu: "🫑", pizza: "🫑" },
+            { es: "la cebolla", menu: "🧅", pizza: "⚪" }, // Zwiebelringe statt ganzer Zwiebel
+            { es: "la aceituna", menu: "🫒", pizza: "⚫" }, // Olivenstücke
+            { es: "el maíz", menu: "🌽", pizza: "🟡" },    // Maiskörner statt Kolben
+            { es: "la piña", menu: "🍍", pizza: "🍍" },
+            { es: "el jamón", menu: "🍖", pizza: "🥩" },
+            { es: "el salami", menu: "🍕", pizza: "🔴" },
+            { es: "el ajo", menu: "🧄", pizza: "🧄" },
+            { es: "el chile", menu: "🌶️", pizza: "🌶️" },
+            { es: "la gamba", menu: "🦐", pizza: "🦐" },
+            { es: "el huevo", menu: "🥚", pizza: "🍳" },
+            { es: "la albahaca", menu: "🌿", pizza: "🍃" }
+        ];
+
+        let currentTarget;
+        let score = 0;
+        let usedInCurrentRound = [];
+
+        function initGame() {
+            const menu = document.getElementById('ingredients-menu');
+            menu.innerHTML = '';
+            usedInCurrentRound = [];
+            score = 0;
+            
+            const shuffled = [...vocabulary].sort(() => 0.5 - Math.random());
+            
+            shuffled.forEach(item => {
+                const btn = document.createElement('div');
+                btn.className = 'ingredient-btn';
+                btn.innerHTML = item.menu;
+                btn.onclick = () => checkChoice(item, btn);
+                menu.appendChild(btn);
+            });
+
+            pickNewWord();
+        }
+
+        function pickNewWord() {
+            const available = vocabulary.filter(v => !usedInCurrentRound.includes(v.es));
+            if (available.length > 0) {
+                let nextTarget;
+                do {
+                    nextTarget = available[Math.floor(Math.random() * available.length)];
+                } while (available.length > 1 && currentTarget && nextTarget.es === currentTarget.es);
+                
+                currentTarget = nextTarget;
+                document.getElementById('target-word').innerText = currentTarget.es;
+            }
+        }
+
+        function checkChoice(item, element) {
+            if (item.es === currentTarget.es) {
+                usedInCurrentRound.push(item.es);
+                element.classList.add('disabled');
+                addIngredientToPizza(item.pizza);
+                score++;
+                
+                document.getElementById('pizza-sauce').style.display = 'block';
+                
+                if (score >= 5) {
+                    document.getElementById('target-word').innerText = "¡Lista!";
+                    document.getElementById('oven-btn').style.display = 'block';
+                } else {
+                    pickNewWord();
+                }
+            } else {
+                element.style.backgroundColor = '#ffcdd2';
+                setTimeout(() => element.style.backgroundColor = 'white', 300);
+            }
+        }
+
+        function addIngredientToPizza(pizzaEmoji) {
+            const layer = document.getElementById('ingredients-layer');
+            // Mehr Teilchen bei Mais und Zwiebeln für Realismus
+            const count = (pizzaEmoji === "🟡" || pizzaEmoji === "⚪") ? 10 : 5;
+            
+            for(let i=0; i<count; i++) {
+                const span = document.createElement('span');
+                span.className = 'ingredient-on-pizza';
+                span.innerText = pizzaEmoji;
+                
+                // Maiskörner und Zwiebeln kleiner machen
+                if(pizzaEmoji === "🟡") span.style.fontSize = "12px";
+                if(pizzaEmoji === "⚪") span.style.fontSize = "18px";
+
+                const top = Math.random() * 65 + 10;
+                const left = Math.random() * 65 + 10;
+                span.style.top = top + '%';
+                span.style.left = left + '%';
+                span.style.transform = `rotate(${Math.random() * 360}deg)`;
+                layer.appendChild(span);
+            }
+        }
+
+        function nextPizza() {
+            document.getElementById('ingredients-layer').innerHTML = '';
+            document.getElementById('pizza-sauce').style.display = 'none';
+            document.getElementById('oven-btn').style.display = 'none';
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
