@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spanisch-Rallye Medium</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        #ui {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 50; text-align: center; width: 90%; pointer-events: none;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95); padding: 12px 25px;
+            border-radius: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 3px solid #3498db;
+        }
+        .word { font-size: 32px; font-weight: bold; color: #2c3e50; }
+        
+        #gameOverOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; color: white; text-align: center;
+        }
+        #restartBtn {
+            margin-top: 25px; padding: 15px 45px; font-size: 22px; font-weight: bold;
+            background: #2ecc71; color: white; border: none; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 5px 0 #27ae60;
+        }
+        canvas { display: block; touch-action: none; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <div class="card">
+        <div style="font-size: 12px; color: #7f8c8d; font-weight: bold;">FINDE:</div>
+        <div class="word" id="targetWord">...</div>
+    </div>
+</div>
+
+<div id="gameOverOverlay">
+    <h1 id="failMessage">¡Oh no!</h1>
+    <p id="finalScore" style="font-size: 20px;">Punkte: 0</p>
+    <button id="restartBtn">Erneut versuchen</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const targetDisplay = document.getElementById('targetWord');
+    const overlay = document.getElementById('gameOverOverlay');
+    const failMsg = document.getElementById('failMessage');
+    const scoreMsg = document.getElementById('finalScore');
+    const restartBtn = document.getElementById('restartBtn');
+
+    const vocab = [
+        { de: "das Auto", es: "el coche", icon: "🚗" },
+        { de: "der LKW", es: "el camión", icon: "🚛" },
+        { de: "das Motorrad", es: "la moto", icon: "🏍️" },
+        { de: "der Bus", es: "el autobús", icon: "🚌" },
+        { de: "das Fahrrad", es: "la bicicleta", icon: "🚲" },
+        { de: "der Traktor", es: "el tractor", icon: "🚜" },
+        { de: "der Krankenwagen", es: "la ambulancia", icon: "🚑" },
+        { de: "die Feuerwehr", es: "el camión de bomberos", icon: "🚒" },
+        { de: "das Polizeiauto", es: "el coche de policía", icon: "🚓" },
+        { de: "das Taxi", es: "el taxi", icon: "🚕" },
+        { de: "der Roller", es: "el escúter", icon: "🛵" },
+        { de: "das Wohnmobil", es: "la autocaravana", icon: "🚐" },
+        { de: "der Abschleppwagen", es: "la grúa", icon: "🛻" },
+        { de: "der Lieferwagen", es: "la furgoneta", icon: "🚚" },
+        { de: "der Jeep", es: "el todoterreno", icon: "🚙" },
+        { de: "das Rennauto", es: "el coche de carreras", icon: "🏎️" },
+        { de: "das Elektroauto", es: "el coche eléctrico", icon: "⚡" }
+    ];
+
+    let currentTask = {};
+    let vehicles = [];
+    let trees = [];
+    let clouds = [];
+    let gameOver = false;
+    let score = 0;
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    function spawnTask() {
+        currentTask = vocab[Math.floor(Math.random() * vocab.length)];
+        targetDisplay.innerText = currentTask.de;
+    }
+
+    class Cloud {
+        constructor() {
+            this.x = canvas.width + 100;
+            this.y = Math.random() * (canvas.height * 0.3);
+            this.speed = 0.6 + Math.random() * 0.4; 
+            this.size = 55 + Math.random() * 45;
+        }
+        draw() { ctx.font = this.size + "px serif"; ctx.fillText("☁️", this.x, this.y); }
+        update() { this.x -= this.speed; }
+    }
+
+    class Tree {
+        constructor() {
+            this.x = canvas.width + 120;
+            this.y = canvas.height * 0.65;
+            this.speed = 2.0; 
+            this.icon = Math.random() > 0.5 ? "🌳" : "🌲";
+            this.size = 85 + Math.random() * 35;
+        }
+        draw() { ctx.font = this.size + "px serif"; ctx.fillText(this.icon, this.x, this.y); }
+        update() { this.x -= this.speed; }
+    }
+
+    class Vehicle {
+        constructor() {
+            // Ausgewogene 45% Chance auf das richtige Auto
+            if (Math.random() < 0.45) {
+                this.data = currentTask;
+            } else {
+                this.data = vocab[Math.floor(Math.random() * vocab.length)];
+            }
+            this.x = -160;
+            this.y = canvas.height * 0.82; 
+            this.speed = 2.1 + Math.random() * 1.6; // MITTELDING GESCHWINDIGKEIT
+        }
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.font = "bold 19px sans-serif";
+            ctx.fillStyle = "#1a1a1a";
+            ctx.textAlign = "center";
+            ctx.fillText(this.data.es, 0, -85);
+            ctx.scale(-1, 1);
+            ctx.font = "105px serif";
+            ctx.textAlign = "center";
+            ctx.fillText(this.data.icon, 0, 0);
+            ctx.restore();
+        }
+        update() { this.x += this.speed; }
+    }
+
+    function drawBackground() {
+        clouds.forEach((c, i) => { c.update(); c.draw(); if (c.x < -150) clouds.splice(i, 1); });
+        ctx.fillStyle = "#2ecc71"; 
+        ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.5);
+        trees.forEach((t, i) => { t.update(); t.draw(); if (t.x < -160) trees.splice(i, 1); });
+        
+        ctx.fillStyle = "#7f8c8d"; // Straße (etwas dunkleres Grau)
+        ctx.fillRect(0, canvas.height * 0.75, canvas.width, canvas.height * 0.15);
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.setLineDash([25, 25]);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height * 0.82);
+        ctx.lineTo(canvas.width, canvas.height * 0.82);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function handleInput(ex, ey) {
+        if (gameOver) return;
+        for (let i = vehicles.length - 1; i >= 0; i--) {
+            let v = vehicles[i];
+            // Präziser Klick-Radius
+            if (ex > v.x - 75 && ex < v.x + 75 && ey > v.y - 115 && ey < v.y + 35) {
+                if (v.data.es === currentTask.es) {
+                    score++;
+                    vehicles.splice(i, 1);
+                    spawnTask();
+                } else {
+                    die("¡Cuidado!\nDas war " + v.data.es);
+                }
+                break;
+            }
+        }
+    }
+
+    function die(msg) {
+        gameOver = true;
+        failMsg.innerText = msg;
+        scoreMsg.innerText = "Dein Score: " + score;
+        overlay.style.display = "flex";
+    }
+
+    function restartGame() {
+        score = 0; vehicles = []; trees = []; clouds = [];
+        gameOver = false;
+        overlay.style.display = "none";
+        spawnTask();
+        gameLoop();
+    }
+
+    function gameLoop() {
+        if (gameOver) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        vehicles.forEach((v, i) => {
+            v.update(); v.draw();
+            if (v.x > canvas.width + 250) {
+                if (v.data.es === currentTask.es) die("¡Rápido!\n" + v.data.es + " ist entkommen.");
+                vehicles.splice(i, 1);
+            }
+        });
+        requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e.touches[0].clientX, e.touches[0].clientY); });
+    canvas.addEventListener('mousedown', (e) => handleInput(e.clientX, e.clientY));
+    restartBtn.addEventListener('click', restartGame);
+    window.addEventListener('resize', resize);
+
+    setInterval(() => { if(!gameOver) clouds.push(new Cloud()); }, 4000);
+    setInterval(() => { if(!gameOver) trees.push(new Tree()); }, 2200);
+    setInterval(() => { if(!gameOver) vehicles.push(new Vehicle()); }, 2800);
+
+    resize();
+    spawnTask();
+    gameLoop();
+</script>
+</body>
+</html>
