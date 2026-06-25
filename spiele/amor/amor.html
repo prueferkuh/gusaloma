@@ -155,7 +155,7 @@
             z-index: 10;
             transition: opacity 0.3s;
         }
-        
+
         .heart.broken .heart-text {
             opacity: 0;
         }
@@ -181,11 +181,11 @@
 <div id="game-container">
     <div id="quiz-section">
         <div class="german-word" id="word-to-translate">Lade Vokabeln...</div>
-        
+
         <div class="cupid-wrapper">
             <img src="relaxed.png" id="amor-relax" class="cupid-img" alt="Amor entspannt">
             <img src="gespannt.png" id="amor-shoot" class="cupid-img hidden" alt="Amor gespannt">
-            
+
             <img src="pfeil.png" id="arrow-projectile" alt="Pfeil">
         </div>
 
@@ -198,7 +198,7 @@
                 <div id="h2"></div>
             </div>
         </div>
-        
+
         <p id="score">💘 <span id="current">1</span> / <span id="total">--</span></p>
     </div>
 
@@ -252,14 +252,14 @@
 
     function showNext() {
         if (currentIndex >= currentList.length) return showResults();
-        
+
         const q = currentList[currentIndex];
         document.getElementById('word-to-translate').innerText = q.de;
         document.getElementById('current').innerText = currentIndex + 1;
 
         let options = [q.es];
         let maxOptions = Math.min(3, vocabulary.length);
-        
+
         while(options.length < maxOptions) {
             let r = vocabulary[Math.floor(Math.random() * vocabulary.length)].es;
             if(!options.includes(r)) options.push(r);
@@ -284,7 +284,7 @@
         const arrow = document.getElementById('arrow-projectile');
         const amorRelax = document.getElementById('amor-relax');
         const amorShoot = document.getElementById('amor-shoot');
-        
+
         const tRect = target.getBoundingClientRect();
         const cRect = amorRelax.getBoundingClientRect();
 
@@ -314,7 +314,7 @@
             } else {
                 // Falsche Antwort: Herz zerbricht
                 target.classList.add('broken');
-                
+
                 // Setzt die Optionen nach Ablauf der Animation (600ms) lautlos zurück
                 setTimeout(() => {
                     showNext();
