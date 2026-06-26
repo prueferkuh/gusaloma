@@ -18,7 +18,6 @@
             font-family: 'Segoe UI', Roboto, sans-serif;
             background: var(--sky-blue);
             user-select: none;
-            /* Wichtig für Mobile, verhindert Scroll-Gesten beim Ziehen */
             touch-action: none; 
         }
 
@@ -69,20 +68,21 @@
         .fish-container {
             position: absolute;
             display: flex; flex-direction: column; align-items: center;
-            touch-action: none; /* Verhindert Browser-Gesten auf dem Element */
+            touch-action: none;
             z-index: 10;
+            cursor: grab;
         }
         
         .fish-container:active {
             cursor: grabbing;
-            z-index: 100; /* Gezogener Fisch immer im Vordergrund */
+            z-index: 100;
         }
 
         .fish-graphic {
             width: 80px;
             height: auto;
             display: inline-block;
-            pointer-events: none; /* Verhindert, dass das Bild das Drag-Event blockiert */
+            pointer-events: none;
         }
 
         .fish-span {
@@ -92,9 +92,8 @@
             pointer-events: none;
         }
 
-        /* Animation für das Zurückfedern bei Fehlwurf */
         .fish-container.returning {
-            transition: left 0.5s cubic-bezier(0.25, 1, 0.5, 1), top 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), top 0.4s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         #score { font-size: 18px; color: #27ae60; font-weight: bold; }
@@ -123,7 +122,6 @@
     let kategorieName = "Essen und Trinken"; 
     let score = 0;
 
-    // UI Elemente
     const gameContainer = document.getElementById('game-container');
     const ocean = document.getElementById('ocean');
     const scoreDisplay = document.getElementById('score');
@@ -183,7 +181,10 @@
             if(!options.includes(rand)) options.push(rand);
         }
         options.sort(() => Math.random() - 0.5);
-        options.forEach((word, i) => createFish(word, i, correct.es));
+        
+        setTimeout(() => {
+            options.forEach((word, i) => createFish(word, i, correct.es));
+        }, 50);
     }
 
     function triggerHuntingAnimation() {
@@ -201,7 +202,6 @@
         }, 1150);
     }
 
-    // AABB Kollisionsprüfung zwischen Fisch-Element und Bären-Element
     function checkCollision(el1, el2) {
         const rect1 = el1.getBoundingClientRect();
         const rect2 = el2.getBoundingClientRect();
@@ -218,11 +218,14 @@
         const container = document.createElement('div');
         container.className = 'fish-container';
         
-        // Startpositionen im Ozean (Pixelbasiert berechnen, um Drag-Konflikte zu minimieren)
-        const startLeftPerc = 15 + index * 28;
-        const startTopPerc = 15 + Math.random() * 60;
-        container.style.left = startLeftPerc + "%";
-        container.style.top = startTopPerc + "%";
+        const oceanWidth = ocean.clientWidth || window.innerWidth;
+        const oceanHeight = ocean.clientHeight || (window.innerHeight * 0.75);
+
+        let currentLeft = (oceanWidth * (0.15 + index * 0.28));
+        let currentTop = (oceanHeight * (0.15 + Math.random() * 0.5));
+        
+        container.style.left = `${currentLeft}px`;
+        container.style.top = `${currentTop}px`;
 
         const fish = document.createElement('img');
         fish.className = 'fish-graphic';
@@ -239,25 +242,28 @@
 
         container.appendChild(fish);
         container.appendChild(label);
+        ocean.appendChild(container);
 
-        // Variablen für autonome Schwimmbewegung
         let dir = Math.random() > 0.5 ? 1 : -1;
         let isDragging = false;
+        const speed = 1.5; 
 
         function move() {
             if (gameContainer.style.display === 'none' || isDragging || container.classList.contains('returning')) return;
             
-            // Konvertiere aktuellen Left-Wert temporär in Prozent für die Schwimm-Logik
-            let left = (container.offsetLeft / ocean.clientWidth) * 100;
+            currentLeft += speed * dir;
             
-            if(left > 85 || left < 5) dir *= -1;
-            container.style.left = (left + (0.2 * dir)) + "%";
+            if (currentLeft > (ocean.clientWidth - 90) || currentLeft < 10) {
+                dir *= -1;
+            }
+            
+            container.style.left = `${currentLeft}px`;
             fish.style.transform = dir > 0 ? "scaleX(-1)" : "scaleX(1)";
             requestAnimationFrame(move);
         }
-        move();
+        
+        requestAnimationFrame(move);
 
-        // --- DRAG & DROP LOGIK (POINTER EVENTS FÜR PC & MOBILE) ---
         let startX, startY;
         let origLeftPx, origTopPx;
 
@@ -266,11 +272,9 @@
             isDragging = true;
             container.setPointerCapture(e.pointerId);
 
-            // Speichere die exakte Position in Pixeln vor dem Ziehen (für den Reset)
             origLeftPx = container.offsetLeft;
             origTopPx = container.offsetTop;
 
-            // Klick/Touch-Offset bestimmen
             startX = e.clientX - origLeftPx;
             startY = e.clientY - origTopPx;
         });
@@ -278,18 +282,15 @@
         container.addEventListener('pointermove', (e) => {
             if (!isDragging) return;
 
-            // Neue Positionen errechnen
-            let newX = e.clientX - startX;
-            let newY = e.clientY - startY;
+            currentLeft = e.clientX - startX;
+            currentTop = e.clientY - startY;
 
-            // Grenzen innerhalb des Ozeans einhalten
-            newX = Math.max(0, Math.min(newX, ocean.clientWidth - container.clientWidth));
-            newY = Math.max(0, Math.min(newY, ocean.clientHeight - container.clientHeight));
+            currentLeft = Math.max(0, Math.min(currentLeft, ocean.clientWidth - container.clientWidth));
+            currentTop = Math.max(0, Math.min(currentTop, ocean.clientHeight - container.clientHeight));
 
-            container.style.left = `${newX}px`;
-            container.style.top = `${newY}px`;
+            container.style.left = `${currentLeft}px`;
+            container.style.top = `${currentTop}px`;
 
-            // Optisches Feedback am Bären, wenn man drüber-hovert
             if (checkCollision(container, bearContainer)) {
                 bearContainer.style.transform = "translateX(-50%) scale(1.1)";
             } else {
@@ -298,55 +299,53 @@
         });
 
         container.addEventListener('pointerup', (e) => {
-            if (!isDragging) return;
+            if (!isDragging) return; // Verhindert doppelte Trigger
             isDragging = false;
             container.releasePointerCapture(e.pointerId);
             bearContainer.style.transform = "translateX(-50%) scale(1)";
 
-            // Prüfen, ob der Fisch erfolgreich zum Bären gebracht wurde
             if (checkCollision(container, bearContainer)) {
                 if (word === correctEs) {
-                    // RICHTIG
                     score += 10;
                     triggerHuntingAnimation();
-                    container.style.transition = "all 0.4s ease-in";
+                    container.style.transition = "all 0.3s ease-in";
                     container.style.transform = "scale(0)";
                     container.style.opacity = "0";
-                    setTimeout(nextRound, 400);
+                    setTimeout(nextRound, 350);
                 } else {
-                    // FALSCH
                     score = Math.max(0, score - 5);
                     
-                    // Fisch federt zurück zur alten Position
                     container.classList.add('returning');
-                    container.style.left = `${origLeftPx}px`;
-                    container.style.top = `${origTopPx}px`;
+                    // FIX: Setze die internen Positionsvariablen sofort zurück, damit die Bewegung nach dem Reset nicht springt
+                    currentLeft = origLeftPx;
+                    currentTop = origTopPx;
                     
-                    // Optischer Fehler-Effekt (wird durchsichtig)
+                    container.style.left = `${currentLeft}px`;
+                    container.style.top = `${currentTop}px`;
                     container.style.opacity = "0.3";
                     
                     setTimeout(() => {
                         container.classList.remove('returning');
                         container.style.opacity = "1";
-                        isDragging = false;
-                        move(); // Schwimmbewegung fortsetzen
-                    }, 500);
+                        move(); 
+                    }, 400);
                 }
                 scoreDisplay.innerText = "Punkte: " + score;
             } else {
-                // Irgendwo im Wasser losgelassen -> Zurückfedern und weiter schwimmen
                 container.classList.add('returning');
-                container.style.left = `${origLeftPx}px`;
-                container.style.top = `${origTopPx}px`;
+                // FIX: Auch hier die Variablen synchronisieren
+                currentLeft = origLeftPx;
+                currentTop = origTopPx;
+                
+                container.style.left = `${currentLeft}px`;
+                container.style.top = `${currentTop}px`;
                 
                 setTimeout(() => {
                     container.classList.remove('returning');
                     move();
-                }, 500);
+                }, 400);
             }
         });
-
-        ocean.appendChild(container);
     }
 </script>
 
