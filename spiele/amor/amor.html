@@ -123,23 +123,24 @@
             70% { transform: scale(1); }
         }
 
-        /* Animation für das zerbrechende Herz */
+        /* Optimierte Schüttel- und Bruch-Animation */
         .heart.broken {
-            animation: breakHeart 0.6s forwards ease-in;
+            animation: shakeAndBreak 1s forwards ease-in-out;
             pointer-events: none;
         }
 
-        @keyframes breakHeart {
-            0% {
-                transform: scale(1);
-                clip-path: path('M75 45 C75 0 0 0 0 52 C0 105 75 150 75 150 C75 150 150 105 150 52 C150 0 75 0 75 45');
-            }
+        @keyframes shakeAndBreak {
+            0% { transform: scale(1) translateX(0); }
+            10% { transform: scale(1.1) translateX(-8px) rotate(-3deg); }
+            20% { transform: scale(1.1) translateX(8px) rotate(3deg); }
+            30% { transform: scale(1.1) translateX(-6px) rotate(-2deg); }
+            40% { transform: scale(1.1) translateX(6px) rotate(2deg); }
             50% {
-                transform: scale(1.1) translateY(10px);
+                transform: scale(1.05) translateX(0) rotate(0deg);
                 clip-path: path('M75 45 C75 0 0 0 0 52 C0 105 70 140 70 150 L65 90 L80 70 L65 50 L75 45 C75 0 150 0 150 52 C150 105 80 140 80 150 L65 90 L80 70 L65 50 Z');
             }
             100% {
-                transform: scale(0.8) translateY(50px);
+                transform: scale(0.7) translateY(250px) rotate(25deg);
                 opacity: 0;
                 clip-path: path('M73 45 C73 0 0 0 0 52 C0 105 60 140 55 150 L50 90 L60 70 L45 50 L73 45 M77 45 C77 0 150 0 150 52 C150 105 90 140 95 150 L100 90 L90 70 L105 50 Z');
             }
@@ -153,7 +154,7 @@
             text-align: center;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             z-index: 10;
-            transition: opacity 0.3s;
+            transition: opacity 0.2s;
         }
 
         .heart.broken .heart-text {
@@ -161,7 +162,25 @@
         }
 
         .hidden { display: none; }
-        #score { color: #888; font-size: 14px; margin-top: 10px; }
+        
+        /* Stats & Score Layout */
+        #score-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+            font-size: 14px;
+        }
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 16px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #score { color: #aaa; }
+        #won-counter { color: #ff5c8a; font-weight: bold; }
+        #lost-counter { color: #8a8a9e; font-weight: bold; }
+
         .action-btn {
             background: linear-gradient(#ffd700, #ff8c00);
             border: none;
@@ -199,7 +218,11 @@
             </div>
         </div>
 
-        <p id="score">💘 <span id="current">1</span> / <span id="total">--</span></p>
+        <div id="score-container">
+            <div class="stat-box" id="score">💘 <span id="current">1</span> / <span id="total">--</span></div>
+            <div class="stat-box">Erobert: <span id="won-counter">0</span> ❤️</div>
+            <div class="stat-box">Gebrochen: <span id="lost-counter">0</span> 💔</div>
+        </div>
     </div>
 
     <div id="result-section" class="hidden">
@@ -215,6 +238,10 @@
     let currentIndex = 0;
     let kategorieName = "Dating und Gefühle"; 
     let isTransitioning = false;
+    
+    // Zähler für das Stats-Board
+    let wonHearts = 0;
+    let lostHearts = 0;
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('kategorie')) {
@@ -244,7 +271,14 @@
         if (vocabulary.length === 0) return;
         currentList = [...vocabulary].sort(() => Math.random() - 0.5);
         currentIndex = 0;
+        wonHearts = 0;
+        lostHearts = 0;
         isTransitioning = false;
+        
+        // UI Counter zurücksetzen
+        document.getElementById('won-counter').innerText = wonHearts;
+        document.getElementById('lost-counter').innerText = lostHearts;
+        
         document.getElementById('quiz-section').classList.remove('hidden');
         document.getElementById('result-section').classList.add('hidden');
         showNext();
@@ -254,6 +288,8 @@
         if (currentIndex >= currentList.length) return showResults();
 
         const q = currentList[currentIndex];
+        
+        // Fortschrittsanzeige wird hier synchron und stabil geladen
         document.getElementById('word-to-translate').innerText = q.de;
         document.getElementById('current').innerText = currentIndex + 1;
 
@@ -279,7 +315,7 @@
 
     function fire(target, selected, correct) {
         if (isTransitioning) return; 
-        isTransitioning = true;
+        isTransitioning = true; // Sperrt das Interface sofort ab Klick
 
         const arrow = document.getElementById('arrow-projectile');
         const amorRelax = document.getElementById('amor-relax');
@@ -309,16 +345,24 @@
             amorRelax.classList.remove('hidden');
 
             if(selected === correct) {
+                // Richtig gewählt
+                wonHearts++;
+                document.getElementById('won-counter').innerText = wonHearts;
+                
                 currentIndex++;
                 showNext();
             } else {
-                // Falsche Antwort: Herz zerbricht
+                // Falsch gewählt
+                lostHearts++;
+                document.getElementById('lost-counter').innerText = lostHearts;
+                
+                // Animation triggern
                 target.classList.add('broken');
 
-                // Setzt die Optionen nach Ablauf der Animation (600ms) lautlos zurück
+                // 1 Sekunde absolute Klicksperre und Cooldown
                 setTimeout(() => {
                     showNext();
-                }, 600);
+                }, 1000);
             }
         }, 450);
     }
