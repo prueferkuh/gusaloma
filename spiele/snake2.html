@@ -62,6 +62,7 @@
             padding: 10px;
             border-radius: 8px;
             box-sizing: border-box;
+            align-items: center;
         }
 
         #task-display {
@@ -87,6 +88,33 @@
             height: auto;
             box-sizing: border-box;
             touch-action: none; 
+        }
+
+        /* VIRTUELLES D-PAD (TOUCH-STEUERUNG) */
+        #dpad-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            pointer-events: none; /* Blockiert das Canvas darunter nicht standardmäßig */
+            z-index: 5;
+        }
+
+        .dpad-btn {
+            pointer-events: auto; /* Aktiviert Klicks/Touch nur auf den Tastenfeldern */
+            background: rgba(255, 255, 255, 0.015); /* Nahezu komplett unsichtbar */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.08); /* Extrem schwache Richtungspfeile zur Orientierung */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .dpad-btn:active {
+            background: rgba(255, 255, 255, 0.05); /* Minimales visuelles Feedback beim Drücken */
         }
 
         #controls-hint {
@@ -134,7 +162,7 @@
     <div id="game-container">
         <div id="info-panel">
             <div>Kat: <span id="current-category" style="color:var(--accent-blue);">Lade...</span></div>
-            <div id="mode-badge" style="font-weight: bold; color: #e67e22; display: none;">🔥 SUPERFOOD MALUS/BONUS 🔥</div>
+            <div id="mode-badge" style="font-size: 0.85rem; font-weight: bold; background: #e67e22; color: #fff; padding: 2px 8px; border-radius: 4px; display: none;">SUPER-RUNDE</div>
             <div>Score: <span id="score-display" style="font-weight:bold; color:#2ecc71;">0</span></div>
         </div>
         
@@ -142,11 +170,23 @@
         
         <div class="canvas-wrapper">
             <canvas id="gameCanvas" width="600" height="400"></canvas>
+            
+            <div id="dpad-layer">
+                <div></div>
+                <div class="dpad-btn" onclick="changeDirection('UP')">▲</div>
+                <div></div>
+                <div class="dpad-btn" onclick="changeDirection('LEFT')">◀</div>
+                <div></div>
+                <div class="dpad-btn" onclick="changeDirection('RIGHT')">▶</div>
+                <div></div>
+                <div class="dpad-btn" onclick="changeDirection('DOWN')">▼</div>
+                <div></div>
+            </div>
         </div>
         
         <div id="controls-hint">
-            <strong>PC:</strong> Pfeiltasten / WASD | <strong>Smartphone:</strong> Wischen (Swipe)<br>
-            Jede 5. Runde ist eine Superfood-Runde: 3 identische Punkte & Doppelte Punkte/Abzug!<br>
+            <strong>PC:</strong> Pfeiltasten / WASD | <strong>Smartphone:</strong> Unsichtbares D-Pad auf dem Feld<br>
+            Jede 5. Runde bringt 3 Auswahlmöglichkeiten und doppelte Punkte!<br>
         </div>
     </div>
 
@@ -194,9 +234,9 @@
                 const katData = data.find(k => k.kategorie === kategorieName);
                 if (katData && katData.vokabeln.length >= 3) {
                     alleVokabeln = katData.vokabeln;
-                    showOverlay("Snake II: Teleportation aktiv", `Kategorie "${kategorieName}" geladen. Jede 5. Runde bringt 3 Auswahlmöglichkeiten und doppelte Punkte!`);
+                    showOverlay("Snake II: Teleportation aktiv", `Kategorie "${kategorieName}" geladen. Nutze das D-Pad oder die Pfeiltasten!`);
                 } else {
-                    showOverlay("Fehler ❌", `Kategorie "${kategorieName}" benötigt mindestens 3 Vokabeln für den Superfood-Modus.`);
+                    showOverlay("Fehler ❌", `Kategorie "${kategorieName}" benötigt mindestens 3 Vokabeln.`);
                 }
             })
             .catch(err => {
@@ -248,11 +288,8 @@
             const rndi = Math.floor(Math.random() * alleVokabeln.length);
             aktuelleFrage = alleVokabeln[rndi];
             
-            if (istSuperfoodRunde) {
-                document.getElementById('task-display').innerText = `💥 SUPER-RUNDE: "${aktuelleFrage.de}" 💥`;
-            } else {
-                document.getElementById('task-display').innerText = `Gesucht: "${aktuelleFrage.de}"`;
-            }
+            // Text ist jetzt in jeder Runde ununterscheidbar clean formatiert
+            document.getElementById('task-display').innerText = `Gesucht: "${aktuelleFrage.de}"`;
 
             let fali = Math.floor(Math.random() * alleVokabeln.length);
             while (alleVokabeln[fali].id === aktuelleFrage.id || fali === rndi) { 
@@ -310,53 +347,25 @@
             return pos;
         }
 
+        // --- STEUERUNGS LOGIK (PC & D-PAD SYNCHRONISIERT) ---
+        function changeDirection(newDir) {
+            if (newDir === "LEFT" && dir !== "RIGHT") dir = "LEFT";
+            else if (newDir === "UP" && dir !== "DOWN") dir = "UP";
+            else if (newDir === "RIGHT" && dir !== "LEFT") dir = "RIGHT";
+            else if (newDir === "DOWN" && dir !== "UP") dir = "DOWN";
+        }
+
         document.addEventListener('keydown', e => {
             const k = e.keyCode;
             if ([37, 38, 39, 40].includes(k)) {
                 e.preventDefault();
             }
 
-            if ((k === 37 || k === 65) && dir !== "RIGHT") dir = "LEFT";
-            else if ((k === 38 || k === 87) && dir !== "DOWN") dir = "UP";
-            else if ((k === 39 || k === 68) && dir !== "LEFT") dir = "RIGHT";
-            else if ((k === 40 || k === 83) && dir !== "UP") dir = "DOWN";
+            if (k === 37 || k === 65) changeDirection("LEFT");
+            else if (k === 38 || k === 87) changeDirection("UP");
+            else if (k === 39 || k === 68) changeDirection("RIGHT");
+            else if (k === 40 || k === 83) changeDirection("DOWN");
         });
-
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        canvas.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-
-        canvas.addEventListener('touchmove', e => {
-            e.preventDefault(); 
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', e => {
-            let touchEndX = e.changedTouches[0].screenX;
-            let touchEndY = e.changedTouches[0].screenY;
-            handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
-        }, { passive: true });
-
-        function handleSwipe(x1, y1, x2, y2) {
-            const diffX = x2 - x1;
-            const diffY = y2 - y1;
-            const threshold = 30;
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > threshold) {
-                    if (diffX > 0 && dir !== "LEFT") dir = "RIGHT";
-                    else if (diffX < 0 && dir !== "RIGHT") dir = "LEFT";
-                }
-            } else {
-                if (Math.abs(diffY) > threshold) {
-                    if (diffY > 0 && dir !== "UP") dir = "DOWN";
-                    else if (diffY < 0 && dir !== "DOWN") dir = "UP";
-                }
-            }
-        }
 
         function drawFoodLabel(foodItem) {
             if (!foodItem) return;
@@ -366,8 +375,6 @@
             
             const textMetrics = ctx.measureText(foodItem.text);
             const textWidth = textMetrics.width;
-            const paddingX = 10;
-            const paddingY = 6;
             
             const textX = foodItem.x + (gridBox / 2) - (textWidth / 2);
             let textY = foodItem.y - 15;
@@ -376,16 +383,11 @@
                 textY = foodItem.y + gridBox + 18; 
             }
 
-            // Box-Farbe ist für ALLE Punkte identisch dunkel
-            ctx.fillStyle = "rgba(26, 26, 36, 0.85)";
-            ctx.fillRect(
-                textX - paddingX, 
-                textY - 11 - paddingY, 
-                textWidth + (paddingX * 2), 
-                22 + (paddingY * 2)
-            );
-
-            // Schriftfarbe ist für ALLE Punkte identisch weiß
+            // Keine Kiste mehr. Stattdessen scharfkantiger Kontur-Text-Schatten für top Lesbarkeit
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "#0d0d13";
+            ctx.strokeText(foodItem.text, textX, textY);
+            
             ctx.fillStyle = "#ffffff";
             ctx.fillText(foodItem.text, textX, textY);
         }
@@ -394,7 +396,7 @@
             ctx.fillStyle = "#0d0d13";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Alle Futter-Quadrate werden in exakt demselben Gelb gezeichnet (#f1c40f)
+            // Alle Punkte gelb
             ctx.fillStyle = "#f1c40f";
             ctx.fillRect(richtigesFutter.x, richtigesFutter.y, gridBox - 1, gridBox - 1);
             ctx.fillRect(falschesFutter.x, falschesFutter.y, gridBox - 1, gridBox - 1);
@@ -402,7 +404,7 @@
                 ctx.fillRect(falschesFutter2.x, falschesFutter2.y, gridBox - 1, gridBox - 1);
             }
 
-            // Alle Labels zeichnen (keine optischen Sonderfunktionen)
+            // Labels zeichnen
             drawFoodLabel(richtigesFutter);
             drawFoodLabel(falschesFutter);
             if (istSuperfoodRunde && falschesFutter2) {
@@ -443,7 +445,7 @@
 
             if (snakeX === richtigesFutter.x && snakeY === richtigesFutter.y) {
                 if (istSuperfoodRunde) {
-                    score += 20; // Bonus: Doppelte Punkte
+                    score += 20; 
                 } else {
                     score += 10;
                 }
@@ -457,7 +459,7 @@
                 (istSuperfoodRunde && falschesFutter2 && snakeX === falschesFutter2.x && snakeY === falschesFutter2.y)
             ) {
                 if (istSuperfoodRunde) {
-                    score = Math.max(0, score - 10); // Malus: Doppelter Abzug in der schweren Runde
+                    score = Math.max(0, score - 10); 
                 } else {
                     score = Math.max(0, score - 5);
                 }
