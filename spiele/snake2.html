@@ -13,7 +13,6 @@
             --text-color: #ffffff;
         }
 
-        /* Erlaubt das Scrollen der Seite wieder ganz normal */
         html, body {
             margin: 0;
             padding: 0;
@@ -49,7 +48,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             border: 2px solid #333;
             width: 100%;
-            max-width: 600px; /* Begrenzt die Größe auf dem PC */
+            max-width: 600px;
             box-sizing: border-box;
         }
 
@@ -74,7 +73,6 @@
             min-height: 35px;
         }
 
-        /* Macht das Canvas-Element responsiv */
         .canvas-wrapper {
             width: 100%;
             position: relative;
@@ -85,11 +83,9 @@
             border: 4px solid #444;
             border-radius: 8px;
             display: block;
-            width: 100%; /* Passt sich der Breite des Containers an */
-            height: auto; /* Behält das Seitenverhältnis bei */
+            width: 100%;
+            height: auto;
             box-sizing: border-box;
-            
-            /* Verhindert Touch-Gesten (Scrollen) NUR auf dem Spielfeld */
             touch-action: none; 
         }
 
@@ -101,7 +97,6 @@
             line-height: 1.4;
         }
 
-        /* Overlay für Game Over / Start */
         .overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -139,6 +134,7 @@
     <div id="game-container">
         <div id="info-panel">
             <div>Kat: <span id="current-category" style="color:var(--accent-blue);">Lade...</span></div>
+            <div id="mode-badge" style="font-weight: bold; color: #e67e22; display: none;">🔥 SUPERFOOD MALUS/BONUS 🔥</div>
             <div>Score: <span id="score-display" style="font-weight:bold; color:#2ecc71;">0</span></div>
         </div>
         
@@ -150,8 +146,7 @@
         
         <div id="controls-hint">
             <strong>PC:</strong> Pfeiltasten / WASD | <strong>Smartphone:</strong> Wischen (Swipe)<br>
-Finde die richtige Übersetzung.<br>
-            
+            Jede 5. Runde ist eine Superfood-Runde: 3 identische Punkte & Doppelte Punkte/Abzug!<br>
         </div>
     </div>
 
@@ -178,29 +173,30 @@ Finde die richtige Übersetzung.<br>
         let aktuelleFrage = null;
         let richtigesFutter = null;
         let falschesFutter = null;
+        let falschesFutter2 = null; 
         let kategorieName = "Essen und Trinken";
 
-        // NEU: Variablen für den Blink-Effekt bei Fehlern
+        let richtigeAntwortenZaehler = 0; 
+        let istSuperfoodRunde = false;
+
         let isBlinking = false;
         let blinkToggle = false;
 
-        // 1. Kategorie aus der URL holen
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('kategorie')) {
             kategorieName = urlParams.get('kategorie');
         }
         document.getElementById('current-category').innerText = kategorieName;
 
-        // 2. Vokabeln laden
         fetch('../vokabeln.json')
             .then(response => response.json())
             .then(data => {
                 const katData = data.find(k => k.kategorie === kategorieName);
-                if (katData && katData.vokabeln.length >= 2) {
+                if (katData && katData.vokabeln.length >= 3) {
                     alleVokabeln = katData.vokabeln;
-                    showOverlay("Snake II: Teleportation aktiv", `Kategorie "${kategorieName}" geladen. Beide Futterpunkte sehen gleich aus. Nutze Swipe oder Pfeiltasten!`);
+                    showOverlay("Snake II: Teleportation aktiv", `Kategorie "${kategorieName}" geladen. Jede 5. Runde bringt 3 Auswahlmöglichkeiten und doppelte Punkte!`);
                 } else {
-                    showOverlay("Fehler ❌", `Kategorie "${kategorieName}" nicht gefunden oder zu wenige Vokabeln.`);
+                    showOverlay("Fehler ❌", `Kategorie "${kategorieName}" benötigt mindestens 3 Vokabeln für den Superfood-Modus.`);
                 }
             })
             .catch(err => {
@@ -227,8 +223,11 @@ Finde die richtige Übersetzung.<br>
             ];
             dir = "RIGHT";
             score = 0;
+            richtigeAntwortenZaehler = 0;
+            istSuperfoodRunde = false;
             isBlinking = false;
             document.getElementById('score-display').innerText = score;
+            document.getElementById('mode-badge').style.display = 'none';
             neueRunde();
             
             if (gameInterval) clearInterval(gameInterval);
@@ -236,11 +235,24 @@ Finde die richtige Übersetzung.<br>
         }
 
         function neueRunde() {
-            if (alleVokabeln.length < 2) return;
+            if (alleVokabeln.length < 3) return;
+
+            if (richtigeAntwortenZaehler > 0 && richtigeAntwortenZaehler % 5 === 0) {
+                istSuperfoodRunde = true;
+                document.getElementById('mode-badge').style.display = 'block';
+            } else {
+                istSuperfoodRunde = false;
+                document.getElementById('mode-badge').style.display = 'none';
+            }
 
             const rndi = Math.floor(Math.random() * alleVokabeln.length);
             aktuelleFrage = alleVokabeln[rndi];
-            document.getElementById('task-display').innerText = `Gesucht: "${aktuelleFrage.de}"`;
+            
+            if (istSuperfoodRunde) {
+                document.getElementById('task-display').innerText = `💥 SUPER-RUNDE: "${aktuelleFrage.de}" 💥`;
+            } else {
+                document.getElementById('task-display').innerText = `Gesucht: "${aktuelleFrage.de}"`;
+            }
 
             let fali = Math.floor(Math.random() * alleVokabeln.length);
             while (alleVokabeln[fali].id === aktuelleFrage.id || fali === rndi) { 
@@ -248,10 +260,34 @@ Finde die richtige Übersetzung.<br>
             }
             const falscheVokabel = alleVokabeln[fali];
 
+            let falscheVokabel2 = null;
+            if (istSuperfoodRunde) {
+                let fali2 = Math.floor(Math.random() * alleVokabeln.length);
+                while (alleVokabeln[fali2].id === aktuelleFrage.id || fali2 === rndi || fali2 === fali) {
+                    fali2 = Math.floor(Math.random() * alleVokabeln.length);
+                }
+                falscheVokabel2 = alleVokabeln[fali2];
+            }
+
             richtigesFutter = generiereZufallsPosition();
+            
             falschesFutter = generiereZufallsPosition();
-            while(richtigesFutter.x === falschesFutter.x && richtigesFutter.y === falschesFutter.y) {
+            while(falschesFutter.x === richtigesFutter.x && falschesFutter.y === richtigesFutter.y) {
                 falschesFutter = generiereZufallsPosition();
+            }
+
+            if (istSuperfoodRunde) {
+                falschesFutter2 = generiereZufallsPosition();
+                while(
+                    (falschesFutter2.x === richtigesFutter.x && falschesFutter2.y === richtigesFutter.y) ||
+                    (falschesFutter2.x === falschesFutter.x && falschesFutter2.y === falschesFutter.y)
+                ) {
+                    falschesFutter2 = generiereZufallsPosition();
+                }
+                falschesFutter2.text = falscheVokabel2.es;
+                falschesFutter2.vokabelId = falscheVokabel2.id;
+            } else {
+                falschesFutter2 = null;
             }
 
             richtigesFutter.text = aktuelleFrage.es;
@@ -267,18 +303,15 @@ Finde die richtige Übersetzung.<br>
             while(aufSchlange) {
                 pos = {
                     x: Math.floor(Math.random() * (canvas.width / gridBox)) * gridBox,
-                    y: Math.floor(Math.random() * ((canvas.height / gridBox) - 1) + 1) * gridBox
+                    y: Math.floor(Math.random() * ((canvas.height / gridBox) - 3) + 2) * gridBox
                 };
                 aufSchlange = snake.some(s => s.x === pos.x && s.y === pos.y);
             }
             return pos;
         }
 
-        // --- STEUERUNG: TASTATUR (PC) ---
         document.addEventListener('keydown', e => {
             const k = e.keyCode;
-            
-            // Verhindert das Standard-Scrollen NUR bei den Pfeiltasten
             if ([37, 38, 39, 40].includes(k)) {
                 e.preventDefault();
             }
@@ -289,7 +322,6 @@ Finde die richtige Übersetzung.<br>
             else if ((k === 40 || k === 83) && dir !== "UP") dir = "DOWN";
         });
 
-        // --- STEUERUNG: SWIPE-GESTEN (SMARTPHONE) ---
         let touchStartX = 0;
         let touchStartY = 0;
 
@@ -326,35 +358,65 @@ Finde die richtige Übersetzung.<br>
             }
         }
 
-        // --- GAME LOOP ---
+        function drawFoodLabel(foodItem) {
+            if (!foodItem) return;
+            
+            ctx.font = "bold 22px 'Segoe UI', Tahoma, sans-serif";
+            ctx.textBaseline = "middle";
+            
+            const textMetrics = ctx.measureText(foodItem.text);
+            const textWidth = textMetrics.width;
+            const paddingX = 10;
+            const paddingY = 6;
+            
+            const textX = foodItem.x + (gridBox / 2) - (textWidth / 2);
+            let textY = foodItem.y - 15;
+
+            if (textY < 25) {
+                textY = foodItem.y + gridBox + 18; 
+            }
+
+            // Box-Farbe ist für ALLE Punkte identisch dunkel
+            ctx.fillStyle = "rgba(26, 26, 36, 0.85)";
+            ctx.fillRect(
+                textX - paddingX, 
+                textY - 11 - paddingY, 
+                textWidth + (paddingX * 2), 
+                22 + (paddingY * 2)
+            );
+
+            // Schriftfarbe ist für ALLE Punkte identisch weiß
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(foodItem.text, textX, textY);
+        }
+
         function draw() {
             ctx.fillStyle = "#0d0d13";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Futter Punkte zeichnen
+            // Alle Futter-Quadrate werden in exakt demselben Gelb gezeichnet (#f1c40f)
             ctx.fillStyle = "#f1c40f";
             ctx.fillRect(richtigesFutter.x, richtigesFutter.y, gridBox - 1, gridBox - 1);
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 16px sans-serif";
-            ctx.fillText(richtigesFutter.text, richtigesFutter.x, richtigesFutter.y - 8);
-
-            ctx.fillStyle = "#f1c40f";
             ctx.fillRect(falschesFutter.x, falschesFutter.y, gridBox - 1, gridBox - 1);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(falschesFutter.text, falschesFutter.x, falschesFutter.y - 8);
+            if (istSuperfoodRunde && falschesFutter2) {
+                ctx.fillRect(falschesFutter2.x, falschesFutter2.y, gridBox - 1, gridBox - 1);
+            }
 
-            // Wechselt den Blink-Zustand in jedem Frame, wenn isBlinking aktiv ist
+            // Alle Labels zeichnen (keine optischen Sonderfunktionen)
+            drawFoodLabel(richtigesFutter);
+            drawFoodLabel(falschesFutter);
+            if (istSuperfoodRunde && falschesFutter2) {
+                drawFoodLabel(falschesFutter2);
+            }
+
             if (isBlinking) {
                 blinkToggle = !blinkToggle;
             }
 
-            // Schlange zeichnen
             for (let i = 0; i < snake.length; i++) {
                 if (isBlinking && blinkToggle) {
-                    // NEU: Rot blinken bei Schaden
                     ctx.fillStyle = (i === 0) ? "#e74c3c" : "#c0392b";
                 } else {
-                    // Normale blaue Farben
                     ctx.fillStyle = (i === 0) ? "#3498db" : "#2980b9";
                 }
                 ctx.fillRect(snake[i].x, snake[i].y, gridBox - 1, gridBox - 1);
@@ -367,31 +429,40 @@ Finde die richtige Übersetzung.<br>
             if (dir === "RIGHT") snakeX += gridBox;
             if (dir === "DOWN") snakeY += gridBox;
 
-            // Pac-Man Wrap-Around Effekt
             if (snakeX < 0) snakeX = canvas.width - gridBox;
             else if (snakeX >= canvas.width) snakeX = 0;
 
             if (snakeY < 0) snakeY = canvas.height - gridBox;
             else if (snakeY >= canvas.height) snakeY = 0;
 
-            // Selbstbiss-Prüfung
             for(let i = 0; i < snake.length; i++) {
                 if(snakeX === snake[i].x && snakeY === snake[i].y) { gameOver(); return; }
             }
 
             let newHead = { x: snakeX, y: snakeY };
 
-            // Kollision mit Futter prüfen
             if (snakeX === richtigesFutter.x && snakeY === richtigesFutter.y) {
-                score += 10;
+                if (istSuperfoodRunde) {
+                    score += 20; // Bonus: Doppelte Punkte
+                } else {
+                    score += 10;
+                }
+                richtigeAntwortenZaehler++; 
+                
                 document.getElementById('score-display').innerText = score;
                 snake.unshift(newHead);
                 neueRunde();
-            } else if (snakeX === falschesFutter.x && snakeY === falschesFutter.y) {
-                score = Math.max(0, score - 5);
+            } else if (
+                (snakeX === falschesFutter.x && snakeY === falschesFutter.y) ||
+                (istSuperfoodRunde && falschesFutter2 && snakeX === falschesFutter2.x && snakeY === falschesFutter2.y)
+            ) {
+                if (istSuperfoodRunde) {
+                    score = Math.max(0, score - 10); // Malus: Doppelter Abzug in der schweren Runde
+                } else {
+                    score = Math.max(0, score - 5);
+                }
                 document.getElementById('score-display').innerText = score;
                 
-                // NEU: Aktiviere das rote Blinken für 600 Millisekunden
                 isBlinking = true;
                 setTimeout(() => {
                     isBlinking = false;
@@ -402,7 +473,7 @@ Finde die richtige Übersetzung.<br>
                 if (snake.length > 2) { 
                     snake.pop(); 
                 }
-                neueRunde();
+                neueRunde(); 
             } else {
                 snake.unshift(newHead);
                 snake.pop();
