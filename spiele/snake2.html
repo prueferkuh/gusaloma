@@ -19,7 +19,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: var(--text-color);
             min-height: 100vh;
-            touch-action: manipulation; /* Unterstützt das Scrollen */
+            touch-action: manipulation;
         }
 
         body { padding: 10px; display: flex; flex-direction: column; align-items: center; }
@@ -28,7 +28,7 @@
 
         #game-container {
             display: flex; flex-direction: column; align-items: center;
-            background: var(--panel-bg); padding: 15px; border-radius: 16px;
+            background: var(--panel-bg); padding: 15px; border-radius: 166px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 2px solid #333;
             width: 100%; max-width: 600px; box-sizing: border-box;
         }
@@ -48,13 +48,19 @@
             display: block; width: 100%; height: auto;
         }
 
-        /* D-Pad jetzt rein visuell, keine Touch-Blockade */
+        /* BEHEBUNG: Raster lässt Events durch, die Tasten fangen sie ein */
         #dpad-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr;
             pointer-events: none; z-index: 5;
         }
-        .dpad-btn { display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.05); font-size: 1.5rem; }
+        .dpad-btn { 
+            display: flex; align-items: center; justify-content: center; 
+            color: rgba(255,255,255,0.08); font-size: 1.6rem; 
+            pointer-events: auto; /* Macht die Knöpfe wieder klickbar! */
+            user-select: none; -webkit-user-select: none;
+        }
+        .dpad-btn:active { background: rgba(255, 255, 255, 0.04); border-radius: 4px; }
 
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
@@ -80,9 +86,9 @@
         <div class="canvas-wrapper">
             <canvas id="gameCanvas" width="600" height="400"></canvas>
             <div id="dpad-layer">
-                <div></div><div class="dpad-btn">▲</div><div></div>
-                <div class="dpad-btn">◀</div><div></div><div class="dpad-btn">▶</div>
-                <div></div><div class="dpad-btn">▼</div><div></div>
+                <div></div><div class="dpad-btn" ontouchstart="changeDirection('UP')" onclick="changeDirection('UP')">▲</div><div></div>
+                <div class="dpad-btn" ontouchstart="changeDirection('LEFT')" onclick="changeDirection('LEFT')">◀</div><div></div><div class="dpad-btn" ontouchstart="changeDirection('RIGHT')" onclick="changeDirection('RIGHT')">▶</div>
+                <div></div><div class="dpad-btn" ontouchstart="changeDirection('DOWN')" onclick="changeDirection('DOWN')">▼</div><div></div>
             </div>
         </div>
     </div>
@@ -102,6 +108,17 @@
         let snake = [], dir = "RIGHT", score = 0, gameInterval = null, speed = 130;
         let alleVokabeln = [], aktuelleFrage = null, richtigesFutter = null, falschesFutter = null, falschesFutter2 = null;
         let richtigeAntwortenZaehler = 0, istSuperfoodRunde = false;
+        let richtrungGesperrt = false; // BEHEBUNG: Verhindert schnellen Selbstmord durch Input-Spam
+
+        // --- GLOBAL DIRECTION CONTROL ---
+        function changeDirection(newDir) {
+            if (richtrungGesperrt) return; // Wenn in diesem Frame schon gelenkt wurde, abbrechen
+
+            if (newDir === "LEFT" && dir !== "RIGHT") { dir = "LEFT"; richtrungGesperrt = true; }
+            else if (newDir === "UP" && dir !== "DOWN") { dir = "UP"; richtrungGesperrt = true; }
+            else if (newDir === "RIGHT" && dir !== "LEFT") { dir = "RIGHT"; richtrungGesperrt = true; }
+            else if (newDir === "DOWN" && dir !== "UP") { dir = "DOWN"; richtrungGesperrt = true; }
+        }
 
         // --- SWIPE STEUERUNG (GLOBAL) ---
         let touchStartX = 0, touchStartY = 0;
@@ -126,23 +143,18 @@
             }
         }, { passive: true });
 
-        // --- GAME LOGIC ---
-        function changeDirection(newDir) {
-            if (newDir === "LEFT" && dir !== "RIGHT") dir = "LEFT";
-            else if (newDir === "UP" && dir !== "DOWN") dir = "UP";
-            else if (newDir === "RIGHT" && dir !== "LEFT") dir = "RIGHT";
-            else if (newDir === "DOWN" && dir !== "UP") dir = "DOWN";
-        }
-
+        // --- TASTATUR STEUERUNG (WASD & Pfeiltasten) ---
         document.addEventListener('keydown', e => {
             const k = e.keyCode;
             if (k >= 37 && k <= 40) e.preventDefault();
+            
             if (k === 37 || k === 65) changeDirection("LEFT");
             else if (k === 38 || k === 87) changeDirection("UP");
             else if (k === 39 || k === 68) changeDirection("RIGHT");
             else if (k === 40 || k === 83) changeDirection("DOWN");
         });
 
+        // --- DATA LOAD ---
         fetch('../vokabeln.json')
             .then(r => r.json())
             .then(data => {
@@ -151,7 +163,9 @@
                 if (katData && katData.vokabeln.length >= 3) {
                     alleVokabeln = katData.vokabeln;
                     document.getElementById('current-category').innerText = kat;
-                    showOverlay("Snake II", "Jede 5. Runde: Super-Runde!");
+                    showOverlay("Snake II", "Finde die richtige Übersetzung. WASD, Pfeiltasten, D-Pad oder Wischen aktiv!");
+                } else {
+                    showOverlay("Fehler ❌", "Kategorie nicht gefunden oder zu wenige Vokabeln (min. 3 benötigt).");
                 }
             });
 
@@ -167,8 +181,13 @@
         }
 
         function initGame() {
-            snake = [{x: 200, y: 200}, {x: 180, y: 200}, {x: 160, y: 200}];
+            snake = [
+                {x: 10 * gridBox, y: 10 * gridBox},
+                {x: 9 * gridBox, y: 10 * gridBox},
+                {x: 8 * gridBox, y: 10 * gridBox}
+            ];
             dir = "RIGHT"; score = 0; richtigeAntwortenZaehler = 0;
+            document.getElementById('score-display').innerText = score;
             neueRunde();
             if (gameInterval) clearInterval(gameInterval);
             gameInterval = setInterval(draw, speed);
@@ -186,45 +205,72 @@
             while (alleVokabeln[fali].id === aktuelleFrage.id) fali = Math.floor(Math.random() * alleVokabeln.length);
             
             richtigesFutter = generierePos();
+            
             falschesFutter = generierePos();
-            falschesFutter2 = istSuperfoodRunde ? generierePos() : null;
+            while(falschesFutter.x === richtigesFutter.x && falschesFutter.y === richtigesFutter.y) {
+                falschesFutter = generierePos();
+            }
+
+            if (istSuperfoodRunde) {
+                falschesFutter2 = generierePos();
+                while(
+                    (falschesFutter2.x === richtigesFutter.x && falschesFutter2.y === richtigesFutter.y) ||
+                    (falschesFutter2.x === falschesFutter.x && falschesFutter2.y === falschesFutter.y)
+                ) {
+                    falschesFutter2 = generierePos();
+                }
+                falschesFutter2.text = alleVokabeln[(fali + 1) % alleVokabeln.length].es;
+            } else {
+                falschesFutter2 = null;
+            }
 
             richtigesFutter.text = aktuelleFrage.es;
             falschesFutter.text = alleVokabeln[fali].es;
-            if(falschesFutter2) falschesFutter2.text = alleVokabeln[(fali + 1) % alleVokabeln.length].es;
         }
 
         function generierePos() {
-            return {
-                x: Math.floor(Math.random() * (canvas.width / gridBox)) * gridBox,
-                y: Math.floor(Math.random() * ((canvas.height / gridBox) - 3) + 2) * gridBox
-            };
+            let pos;
+            let aufSchlange = true;
+            while(aufSchlange) {
+                pos = {
+                    x: Math.floor(Math.random() * (canvas.width / gridBox)) * gridBox,
+                    y: Math.floor(Math.random() * ((canvas.height / gridBox) - 3) + 2) * gridBox
+                };
+                aufSchlange = snake.some(s => s.x === pos.x && s.y === pos.y);
+            }
+            return pos;
         }
 
         function drawFoodLabel(f) {
             if (!f) return;
-            // Schriftgröße auf 28px erhöht
             ctx.font = "bold 28px 'Segoe UI', Tahoma, sans-serif";
             ctx.textBaseline = "middle";
             const tw = ctx.measureText(f.text).width;
             const x = f.x + (gridBox/2) - (tw/2);
             const y = (f.y < 30) ? f.y + gridBox + 20 : f.y - 15;
             
-            // Starke Kontur statt Kasten
-            ctx.lineWidth = 5; ctx.strokeStyle = "#000"; ctx.strokeText(f.text, x, y);
+            ctx.lineWidth = 5; ctx.strokeStyle = "#0d0d13"; ctx.strokeText(f.text, x, y);
             ctx.fillStyle = "#fff"; ctx.fillText(f.text, x, y);
         }
 
         function draw() {
+            richtrungGesperrt = false; // Input-Sperre für das neue Frame aufheben
+
             ctx.fillStyle = "#0d0d13"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#f1c40f";
+            
             [richtigesFutter, falschesFutter, falschesFutter2].forEach(f => { if(f) ctx.fillRect(f.x, f.y, gridBox-1, gridBox-1); });
             [richtigesFutter, falschesFutter, falschesFutter2].forEach(drawFoodLabel);
 
             let head = {x: snake[0].x + (dir==="RIGHT"?gridBox:dir==="LEFT"?-gridBox:0), y: snake[0].y + (dir==="DOWN"?gridBox:dir==="UP"?-gridBox:0)};
+            
             if (head.x < 0) head.x = canvas.width-gridBox; else if (head.x >= canvas.width) head.x = 0;
             if (head.y < 0) head.y = canvas.height-gridBox; else if (head.y >= canvas.height) head.y = 0;
             
+            for(let i = 0; i < snake.length; i++) {
+                if(head.x === snake[i].x && head.y === snake[i].y) { gameOver(); return; }
+            }
+
             snake.unshift(head);
             
             if (head.x === richtigesFutter.x && head.y === richtigesFutter.y) {
@@ -235,13 +281,25 @@
             } else if ((falschesFutter && head.x === falschesFutter.x && head.y === falschesFutter.y) || (falschesFutter2 && head.x === falschesFutter2.x && head.y === falschesFutter2.y)) {
                 score = Math.max(0, score - (istSuperfoodRunde ? 10 : 5));
                 document.getElementById('score-display').innerText = score;
-                snake.pop(); snake.pop(); neueRunde();
+                
+                snake.pop(); 
+                if (snake.length > 2) snake.pop(); 
+                neueRunde();
             } else {
                 snake.pop();
             }
 
             ctx.fillStyle = "#3498db";
-            snake.forEach(s => ctx.fillRect(s.x, s.y, gridBox-1, gridBox-1));
+            snake.forEach((s, idx) => {
+                ctx.fillStyle = (idx === 0) ? "#3498db" : "#2980b9";
+                ctx.fillRect(s.x, s.y, gridBox-1, gridBox-1);
+            });
+        }
+
+        function gameOver() {
+            clearInterval(gameInterval);
+            showOverlay("Game Over! 💀", `Endstand: ${score} Punkte.`);
+            document.getElementById('overlay-button').innerText = "Erneut versuchen";
         }
     </script>
 </body>
